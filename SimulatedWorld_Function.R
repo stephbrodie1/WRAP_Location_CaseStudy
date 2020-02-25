@@ -4,7 +4,7 @@ SimulateWorld <- function(){
   library(virtualspecies)
   library(scales)
   library(raster)
-  
+  library(glmmfields)
   #----Generate grid of locations through time----
   x_tot <- seq(1, 20, 1)
   y_tot <- seq(1, 20, 1)
@@ -21,13 +21,30 @@ SimulateWorld <- function(){
     ex <- extent(0.5,20.5,0.5,20.5)
     extent(temp_plain) <- ex
     xy <- coordinates(temp_plain)
-    temp_plain[] <- xy[,2]
+    #temp_plain[] <- xy[,2] # not used
+    # EW: if this is a proxy for bottom temp is 4 deg inc over 100 years too high? 
+    # EW: also these values created a surface with a 4 deg change within a year -- 
+    # -- basically equaivalent to 400-600m depth in the survey
     min <- 0.0404*y + 1.9596 #temp increases by 4 degrees over 100 years
     max <- 0.0404*y + 5.9596
-    vals <- seq(min,max,0.01)
-    vals <- vals[1:400]
-    temp_plain[] <- vals
-    temp <- raster::calc (temp_plain, fun = function(x) jitter(x,amount=1))
+    # EW: next lines commented out, replaced below
+    #temp_plain[] <- seq(min,max,length.out=400) # assign values to RasterLayer
+    #temp <- raster::calc (temp_plain, fun = function(x) jitter(x,amount=.001))
+    
+    # EW: simulate from matern spatial field. We could extend this by
+    # (1) letting matern parameters vary over time, (2) letting latitude 
+    # gradient vary over time, and (3) making the field simulation be non-independent
+    # across years. Right now this generates an independent field by year
+    sim_field = glmmfields::sim_glmmfields(n_knots = 40,
+      n_draws=1, covariance="matern",
+      g = data.frame(lon=xy[,1],lat=xy[,2]), 
+      n_data_points=nrow(xy),
+      B = c(0,0.01), 
+      X = cbind(1,xy[,2]))
+    sim_field$dat$new_y = (sim_field$dat$y + abs(min(sim_field$dat$y)))
+    # make these compatible with previous range
+    temp_plain[] = min + (max-min)*sim_field$dat$new_y / max(sim_field$dat$new_y)
+    temp <- temp_plain
     # plot(temp)
     
     #----Use Virtual Species to assign response curve----
@@ -46,7 +63,7 @@ SimulateWorld <- function(){
     
     #----Convert suitability to Presence-Absence----
     suitability_PA <- virtualspecies::convertToPA(envirosuitability$suitab.raster, PA.method = "probability", beta = 0.5,
-                                  alpha = -0.05, species.prevalence = NULL, plot = FALSE)
+      alpha = -0.05, species.prevalence = NULL, plot = FALSE)
     # plot(suitability_PA$pa.raster")
     
     #----Extract suitability for each location----
@@ -65,7 +82,9 @@ SimulateWorld <- function(){
   summary(grid)
   
   #----Create abundance as a function of the environment----
-  grid$abundance <- ifelse(grid$pres==1,rlnorm(1,2,0.1)*grid$suitability,0)
+  # EW: I'm cranking up the rlnorm parameters to make it more comparable to wc trawl survey estimates -- these new ones based on arrowtooth
+  grid$abundance <- ifelse(grid$pres==1,rlnorm(1,6,1)*grid$suitability,0)
+  #grid$abundance <- ifelse(grid$pres==1,rlnorm(1,2,0.1)*grid$suitability,0)
   grid$year <- ifelse(grid$year<=20,grid$year + 2000, grid$year + 2000) #give years meaning: observed years 2000-2020, forecast years 2021-2100.
   
   return(grid)
