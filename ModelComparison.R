@@ -40,6 +40,9 @@ lines(aggregate(temp~year,dat,FUN="mean"),type="l")
 
 #----Build GAM Models----
 dat_hist$log_abundance <- log(dat_hist$abundance)
+# EW: This comment applies to both the GAM and BRT models, but I think just using temperature as a predictor is too simplistic? 
+# This is where the additional spatial / annual / seasonal variation could come in, with tensor splines etc. This is kind of paired
+# with our discussion on the operating model - whether spatial fields (or something like that) should be included or not
 gam1.p <- gam(pres ~ s(temp,bs='gp') , data=dat_hist, family=binomial)
 gam1.a <- gam(log_abundance ~ s(temp,bs='gp')  , data=dat_hist[dat_hist$abundance>0,], family=gaussian)
 saveRDS(gam1.p, paste0(Sim1,'GAM_Sim1_binom.rds'))
