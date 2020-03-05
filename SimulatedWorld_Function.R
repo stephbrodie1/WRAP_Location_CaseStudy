@@ -28,8 +28,8 @@ SimulateWorld <- function(){
     min <- 0.0404*y + 1.9596 #temp increases by 4 degrees over 100 years
     max <- 0.0404*y + 5.9596
     # EW: next lines commented out, replaced below
-    #temp_plain[] <- seq(min,max,length.out=400) # assign values to RasterLayer
-    #temp <- raster::calc (temp_plain, fun = function(x) jitter(x,amount=.001))
+    # temp_plain[] <- seq(min,max,length.out=400) # assign values to RasterLayer
+    # temp <- raster::calc (temp_plain, fun = function(x) jitter(x,amount=1))
     
     # EW: simulate from matern spatial field. We could extend this by
     # (1) letting matern parameters vary over time, (2) letting latitude 
@@ -39,7 +39,7 @@ SimulateWorld <- function(){
       n_draws=1, covariance="matern",
       g = data.frame(lon=xy[,1],lat=xy[,2]), 
       n_data_points=nrow(xy),
-      B = c(0,0.01), 
+      B = c(0,-0.05), #making second parameter negative to invert data, and slightly higher to have better latitudinal siganl 
       X = cbind(1,xy[,2]))
     sim_field$dat$new_y = (sim_field$dat$y + abs(min(sim_field$dat$y)))
     # make these compatible with previous range
@@ -52,7 +52,7 @@ SimulateWorld <- function(){
     names(envir_stack) <- c('temp')
     
     #----assign response curve with mean at 3 degrees----
-    parameters <- virtualspecies::formatFunctions(temp = c(fun="dnorm",mean=3,sd=2))
+    parameters <- virtualspecies::formatFunctions(temp = c(fun="dnorm",mean=4,sd=1))
     
     #----convert temperature raster to species suitability----
     envirosuitability <- virtualspecies::generateSpFromFun(envir_stack,parameters=parameters, rescale = FALSE)
@@ -64,7 +64,7 @@ SimulateWorld <- function(){
     #----Convert suitability to Presence-Absence----
     suitability_PA <- virtualspecies::convertToPA(envirosuitability$suitab.raster, PA.method = "probability", beta = 0.5,
       alpha = -0.05, species.prevalence = NULL, plot = FALSE)
-    # plot(suitability_PA$pa.raster")
+    # plot(suitability_PA$pa.raster)
     
     #----Extract suitability for each location----
     print("Extracting suitability")
@@ -83,8 +83,9 @@ SimulateWorld <- function(){
   
   #----Create abundance as a function of the environment----
   # EW: I'm cranking up the rlnorm parameters to make it more comparable to wc trawl survey estimates -- these new ones based on arrowtooth
-  grid$abundance <- ifelse(grid$pres==1,rlnorm(1,6,1)*grid$suitability,0)
-  #grid$abundance <- ifelse(grid$pres==1,rlnorm(1,2,0.1)*grid$suitability,0)
+  # SB: rlnorm parameters (6,1) were too large for estimation model. GAMs had explained deviance <10%. 
+  # grid$abundance <- ifelse(grid$pres==1,rlnorm(400,6,1)*grid$suitability,0)
+  grid$abundance <- ifelse(grid$pres==1,rlnorm(400,2,0.1)*grid$suitability,0)
   grid$year <- ifelse(grid$year<=20,grid$year + 2000, grid$year + 2000) #give years meaning: observed years 2000-2020, forecast years 2021-2100.
   
   return(grid)
