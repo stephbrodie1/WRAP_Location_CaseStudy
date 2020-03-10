@@ -75,15 +75,15 @@ SimulateWorld <- function(temp_diff, temp_spatial, PA_shape, abund_enviro){
     parameters <- virtualspecies::formatFunctions(temp = c(fun="dnorm",mean=4,sd=1))
     
     #----convert temperature raster to species suitability----
-    envirosuitability <- virtualspecies::generateSpFromFun(envir_stack,parameters=parameters, rescale = FALSE,rescale.each.response = FALSE) # ***** both must be FALSE
-    
-    if (y == 1) {ref_max <- envirosuitability$suitab.raster@data@max}  #JS/BM: records maximum suitability on native scale, assuming optimum temp is encountered in Y1
+    envirosuitability <- virtualspecies::generateSpFromFun(envir_stack,parameters=parameters, rescale = FALSE,rescale.each.response = FALSE)
+    #rescale
+    ref_max <- dnorm(parameters$temp$args[1], mean=parameters$temp$args[1], sd=parameters$temp$args[2]) #JS/BM: potential maximum suitability based on optimum temperature
     envirosuitability$suitab.raster <- (1/ref_max)*envirosuitability$suitab.raster #JS/BM: rescaling suitability, so the max suitbaility is only when optimum temp is encountered
     
     #Plot suitability and response curve
     # plot(envirosuitability$suitab.raster) #plot habitat suitability
     # virtualspecies::plotResponse(envirosuitability) #plot response curves
-    # 
+
     #----Convert suitability to Presence-Absence----
     if (PA_shape == "logistic") {
       #SB: specifies alpha and beta of logistic - creates almost knife-edge absence -> presence
