@@ -1,6 +1,5 @@
-
-#Convert ROMS netcdf files into rasters
-#Rasters need to be used for the virtualspecies simulation
+#Convert ROMS GCM netcdf files into rasters
+#Files provided by Mike Jacox. Use beyond the WRAP workshop requires permission by Mike Jacox (michael.jacox@noaa.gov)
 
 #8 covariates: sst, bottom temp, ild, chl-a surface, chl-a 50m, bottom oxygen, depth of 2.0 oxytherm, bottom depth layer (reference point)
 #3 global climate models: Hadley, IPSL, GFDL
@@ -15,12 +14,16 @@
 wd <- '~/Dropbox/WRAP Location^3/'
 setwd(wd)
 
+#----load library----
+library(ncdf4)
+library(raster)
+
 #-----Load in Dropbox files----
 #note: download files locally. Netcdfs are contained in a folder called 2d_fields
 files_long <- list.files('2d_fields/monthly', full.names = TRUE)
 files_short <- list.files('2d_fields/monthly', full.names = FALSE)
 
-for (f in 5:10){ #skipping bottom layer depth as it is unique --> Steph check if it can go in the loop
+for (f in 2:22){ #skipping bottom layer depth as it is a unique (and static)
   print(files_long[f])
   nc <- nc_open(files_long[f])
   # print(nc) #run if you want more details on file
@@ -38,7 +41,7 @@ for (f in 5:10){ #skipping bottom layer depth as it is unique --> Steph check if
                 ymn=min(lat), ymx=max(lat), 
                 crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
     r <- flip(r,2)
-    #plot(r)
+    # plot(r)
     
     #create nested folders to save files
     #First create GCM folder
