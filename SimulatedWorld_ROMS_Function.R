@@ -2,7 +2,7 @@
 #It has slight differences to the other SimulatedWorld_function that 'randomly' generates environmental data
 #Remember: 1980-2010 are not observed data (by design)
 
-SimulatedWorld_ROMS <- function(PA_shape, abund_enviro){
+SimulateWorld_ROMS <- function(PA_shape, abund_enviro, dir){
   # 'PA_shape' specifies how enviro suitability determines species presence-absence...
   #... takes values of "logistic" (SB original), "logistic_prev" (JS, reduces knife-edge), "linear" (JS, reduces knife edge, encourages more absences)
   # 'abund_enviro' specifies abundance if present, can be "lnorm_low" (SB original)...
@@ -16,14 +16,14 @@ SimulatedWorld_ROMS <- function(PA_shape, abund_enviro){
   #Needs to be modified as variables are added. Starting with sst
   #Assuming 400 'samples' are taken each year, from 1980-2100
   output <- as.data.frame(matrix(NA, nrow=48400,ncol=6))
-  colnames(output) <- c("year","lon","lat","presabs","suitability","sst")
+  colnames(output) <- c("lon","lat","year","presabs","suitability","sst")
 
   
   #----Load in rasters----
   gcm_dr <- 'gfdl'
   variable1 <- "sst_monthly"
   
-  files_sst <- list.files('gfdl/sst_monthly', full.names = TRUE, pattern=".grd") #should be 1452 files
+  files_sst <- list.files(paste0(dir,'gfdl/sst_monthly'), full.names = TRUE, pattern=".grd") #should be 1452 files
   months <- rep(1:12,121) 
   years <- rep(1980:2100,each=12)
   august_indexes <- which(months==8) #picking last month in summer
