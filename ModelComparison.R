@@ -25,9 +25,9 @@ source('WRAP_Location_CaseStudy/SimulatedWorld_ROMS_Function.R') #load ROMS simu
 
 #Set parameters for functions
 abund_enviro <- "lnorm_low" #can be "lnorm_low" (SB); "lnorm_high" (EW); or "poisson" (JS)
-PA_shape <- "logistic" #can be "logistic" (SB); "linear" (JS)
+PA_shape <- "logistic" #can be "logistic" (SB); "logistic_prev","linear" (JS)
 temp_spatial <- "matern" #can be "simple" (SB); or "matern" (EW)
-temp_diff <- 4 #can be 2 or 4 degrees
+temp_diff <- c(1,4,3,7) #specifies min and max temps at year 1 and year 100 (e.g. temp_diff=c(1,3,5,7) means year 1 varies from 1-3C and year 100 from 5-7C). For non-ROMS data. 
 dir <- "~/Dropbox/WRAP Location^3/Rasters_2d_monthly/" #directory where ROMS data is stored (on dropbox, email steph for access)
 
 #Run this function
@@ -84,7 +84,7 @@ if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
 }
 
 #Run if poisson response was simulated
-if (abund_enviro = "poisson"){
+if (abund_enviro == "poisson"){
   # JS: default smoothness
   gam2.a <- gam(round(abundance) ~ s(temp), data=dat_hist, family=poisson)
   #JS: gam with restricted smoothness
@@ -123,8 +123,8 @@ if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
 }
 
 #Run if poisson response was simulated
-if (abund_enviro = "poisson"){
-  dat_hist$abundance_round <- round(dat_hist$abundance)
+if (abund_enviro == "poisson"){
+  dat_hist$abundance_round <- round(dat_hist$abundance) #rounded only needed for Poisson
   brt2.a <- gbm.step(data=dat_hist, gbm.x = c("temp"),gbm.y = 'abundance_round',family = "poisson",tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6)
   dev_eval(brt2.a)
   plot(brt2.a)
@@ -176,7 +176,7 @@ if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
 }
 
 #Run if poisson response was simulated
-if (abund_enviro = "poisson"){
+if (abund_enviro == "poisson"){
   dat_norm <- dat
   dat_norm$temp <- BBmisc::normalize(dat$temp) #covariates must be normalised for MLP
   dat_norm$abundance_round <- round(dat_norm$abundance)
@@ -193,7 +193,7 @@ if (abund_enviro = "poisson"){
   
 }
 
-#---Optional: edit upper part of temp response curve to control predictions-----
+#----Optional: Exploration of poor estimation of upper thermal limit, and methods to constrain it----
 #Written by JS
 # gam with restricted smoothness and zeros added at upper thermal limit (~8C)
 dat_upper <- dat_hist[1:(nrow(dat_hist)*0.05),]  #add 5% extra rows as zeros  ***need a smart way to calculate penalty here; even very few data points can have big impact
@@ -201,48 +201,54 @@ dat_upper[] <- 0
 dat_upper$temp <- 8  #estimated upper thermal limit
 dat_upper$abundance <- 0  #all zeros
 dat_hist2 <- rbind(dat_hist, dat_upper)
-M1.3 <- gam(round(abundance) ~ s(temp, k=4), data=dat_hist2, family=poisson)
-summary(M1.3)
-plot(M1.3)
+gam4 <- gam(round(abundance) ~ s(temp, k=4), data=dat_hist2, family=poisson) gams
+#summary(gam4)
+#plot(gam4)
 
 ##JS: PLOT responses
-par(mfrow=c(3,2))
-ylim2 <- 70
+par(mfrow=c(3,2), mar=c(3,4,4,2))
+ylim2 <- 35
 new_dat <- data.frame(temp=seq(0,max(dat_hist$temp),length=100))
 new_dat2 <- data.frame(temp=seq(0,7,length=100))
 #actual TPC
 xx <- seq(0, 7, length=100)
-yy <- dnorm(xx, mean=3, sd=2)
-plot(xx, yy, type="l", lty=2, main="Actual TPC", col="red", xlim=c(0,8), ylab="suitability", xlab="Temp", ylim=c(0,0.25))
+yy <- dnorm(xx, mean=4, sd=1)  #Must match function in SimulatedWorld function
+plot(xx, yy, type="l", lty=2, main="Actual TPC", col="red", xlim=c(0,8), ylab="suitability", xlab="Temp")
 xlim <- round(100*(max(dat_hist$temp)/7))
 lines(xx[1:xlim], yy[1:xlim], lwd=2)
-#delta model
-P1p <- predict(gam1.p,new_dat2,type='response')
-P1a <- predict(gam1.a,new_dat2,type="response")
-P1 <- P1p*exp(P1a)
-plot(new_dat2$temp, P1, type="l", main="delta-gam", xlim=c(0,8), col="red", lty=2, ylim=c(0,ylim2),
-     ylab="Abundance", xlab="Temp")
-P2p <- predict(gam1.p,new_dat,type='response')
-P2a <- predict(gam1.a,new_dat,type="response")
-P2 <- P2p*exp(P2a)
-points(dat_hist$temp, dat_hist$abundance, col="grey")
-lines(new_dat$temp, P2, lwd=2)
 #gam 1
-plot(new_dat2$temp, predict(M1.1, newdata=new_dat2, type="response"), type="l",
-     main="Poisson", xlim=c(0,8), col="red", lty=2, ylim=c(0,ylim2), ylab="Abundance", xlab="Temp")
+plot(new_dat2$temp, predict(gam2.a, newdata=new_dat2, type="response"), type="l",
+     main="Poisson GAM", xlim=c(0,8), col="red", lty=2, ylim=c(0,ylim2), ylab="Abundance", xlab="Temp")
 points(dat_hist$temp, dat_hist$abundance, col="grey")
-lines(new_dat$temp, predict(M1.1, newdata=new_dat, type="response"), lwd=2)
+lines(new_dat$temp, predict(gam2.a, newdata=new_dat, type="response"), lwd=2)
 #gam 2
-plot(new_dat2$temp, predict(M1.2, newdata=new_dat2, type="response"), type="l",
-     main="Poisson, k=4", xlim=c(0,8), col="red", lty=2, ylim=c(0,ylim2), ylab="Abundance", xlab="Temp")
+plot(new_dat2$temp, predict(gam3.a, newdata=new_dat2, type="response"), type="l",
+     main="Poisson GAM, k=4", xlim=c(0,8), col="red", lty=2, ylim=c(0,ylim2), ylab="Abundance", xlab="Temp")
 points(dat_hist$temp, dat_hist$abundance, col="grey")
-lines(new_dat$temp, predict(M1.2, newdata=new_dat, type="response"), lwd=2)
+lines(new_dat$temp, predict(gam3.a, newdata=new_dat, type="response"), lwd=2)
 #gam 3
-plot(new_dat2$temp, predict(M1.3, newdata=new_dat2, type="response"), type="l",
-     main="Poisson, k=4, upperTL", xlim=c(0,8), col="red", lty=2, ylim=c(0,ylim2), ylab="Abundance", xlab="Temp")
+plot(new_dat2$temp, predict(gam4, newdata=new_dat2, type="response"), type="l",
+     main="Poisson GAM, k=4, upperTL", xlim=c(0,8), col="red", lty=2, ylim=c(0,ylim2), ylab="Abundance", xlab="Temp")
 points(dat_hist2$temp, dat_hist2$abundance, col="grey")
-lines(new_dat$temp, predict(M1.3, newdata=new_dat, type="response"), lwd=2)
+lines(new_dat$temp, predict(gam4, newdata=new_dat, type="response"), lwd=2)
+#BRT
+plot(new_dat2$temp, predict(brt2.a, newdata=new_dat2, type="response", n.trees=brt2.a$gbm.call$best.trees), type="l",
+     main="Poisson BRT", xlim=c(0,8), col="red", lty=2, ylim=c(0,ylim2), ylab="Abundance", xlab="Temp")
+points(dat_hist$temp, dat_hist$abundance, col="grey")
+lines(new_dat$temp, predict(brt2.a, newdata=new_dat, type="response", n.trees=brt2.a$gbm.call$best.trees), lwd=2)
+#MLP
+dat_norm <- dat
+dat_norm$temp_C <- dat_norm$temp
+dat_norm$temp <- BBmisc::normalize(dat_norm$temp)
+temp_mlp <- dat_norm[order(dat_norm$temp),]
+temp_mlp_hist <- temp_mlp[temp_mlp$year <= 2020,]
+plot(temp_mlp$temp_C, predict(mlp2.a, temp_mlp), type="l",
+     main="Poisson MLP", xlim=c(0,8), col="red", lty=2, ylim=c(0,ylim2), ylab="Abundance", xlab="Temp")
+points(dat_hist$temp, dat_hist$abundance, col="grey")
+lines(temp_mlp_hist$temp_C, predict(mlp2.a, temp_mlp_hist), lwd=2)
 par(mfrow=c(1,1))
+
+
 
 
 
@@ -290,7 +296,7 @@ if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
 }
 
 #Run if poisson response was simulated
-if (abund_enviro = "poisson"){
+if (abund_enviro == "poisson"){
 
   #GAM Hindcast (aka Fitted values)
   dat_hist$gam2.a <- predict(gam2.a,dat_hist,type="response")
@@ -331,7 +337,7 @@ if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
 }
 
 #Run if poisson response was simulated
-if (abund_enviro = "poisson"){
+if (abund_enviro == "poisson"){
   #Historical patterns
   plot(aggregate(round(abundance)~year,dat_hist,FUN="sum"),type="l",  lwd=2,ylab="Abundance")
   lines(aggregate(gam2.a~year,dat_hist,FUN="sum"),type="l",  lwd=2,ylab="Abundance",col="blue")
@@ -399,7 +405,7 @@ if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
 
 
 #Run if poisson response was simulated
-if (abund_enviro = "poisson"){
+if (abund_enviro == "poisson"){
   #Historical COG
   cog_hist_lat <- as.data.frame(matrix(NA,nrow=20,ncol=6))
   colnames(cog_hist_lat) <- c("year","truth","gam2.a","gam3.a","brt2.a","mlp2.a")
