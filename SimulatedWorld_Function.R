@@ -1,10 +1,10 @@
 #Function to simulate species distribution and abundance with respect to environmental covariates
 
 SimulateWorld <- function(temp_diff, temp_spatial, PA_shape, abund_enviro){
-  # 'temp_diff' specifies how many degrees each year should vary, currently only '4' (SB) or '2' (JS)
+  # 'temp_diff' specifies min and max temps at year 1 and year 100 (e.g. temp_diff=c(1,3,5,7) means year 1 varies from 1-3C and year 100 from 5-7C)
   # 'temp_spatial' specifies whether we have "simple" linear temp distbn (SB) or added "matern" variation (EW)
   # 'PA_shape' specifies how enviro suitability determines species presence-absence...
-  #... takes values of "logistic" (SB original), "logistic_prev" (JS, reduces knife-edge), "linear" (JS, reduces knife edge, encourages more absences)
+  #... takes values of "logistic" (SB original), "logistic_prev" (JS, reduces knife-edge), "linear" (JS, reduces knife edge, encourages more absences, currently throws errors)
   # 'abund_enviro' specifies abundance if present, can be "lnorm_low" (SB original)...
   #... "lnorm_high" (EW), or "poisson" (JS, increases abundance range)
   
@@ -19,6 +19,11 @@ SimulateWorld <- function(temp_diff, temp_spatial, PA_shape, abund_enviro){
   grid <- as.data.frame(cbind(x = rep(expand$x,100),y = rep(expand$y,100),year = rep(1:100,each=400)))
   years <- seq(1,100,1) #this includes both observed (20 years) and forecast years (80 years)
   
+  temp_max_slope <- (temp_diff[4] - temp_diff[2])/100  # linear slope over 100 years
+  temp_min_slope <- (temp_diff[3] - temp_diff[1])/100
+  temp_max_int <-  temp_diff[2] - temp_max_slope
+  temp_min_int <- temp_diff[1] - temp_min_slope
+  
   #----Loop through each year----
   for (y in years){
     print(paste0("Creating environmental simulation for Year ",y))
@@ -28,20 +33,8 @@ SimulateWorld <- function(temp_diff, temp_spatial, PA_shape, abund_enviro){
     ex <- extent(0.5,20.5,0.5,20.5)
     extent(temp_plain) <- ex
     xy <- coordinates(temp_plain)
-    #temp_plain[] <- xy[,2] # not used
-    if (temp_diff==4){
-      # EW: if this is a proxy for bottom temp is 4 deg inc over 100 years too high? 
-      # EW: also these values created a surface with a 4 deg change within a year -- 
-      # -- basically equaivalent to 400-600m depth in the survey
-      min <- 0.0404*y + 1.9596 #temp increases by 4 degrees over 100 years
-      max <- 0.0404*y + 5.9596
-    }
-    if (temp_diff==2){
-      # JS: above method spatially varies from temp 2-6C in year 1, and ends with 6-10C in year 100
-      # JS: I reduced this to: y1 = 1-3C, y100 = 5-7C
-      min <- 0.0404*y + 0.9192  #JS: starting 1C instead
-      max <- 0.0404*y + 2.9192  #JS: starting 3C instead
-    }
+    min <- temp_min_slope*y + temp_min_int 
+    max <- temp_max_slope*y + temp_max_int
     
     #----Decide on spatial distribution of temperature----
     if (temp_spatial=="simple"){
@@ -94,7 +87,7 @@ SimulateWorld <- function(temp_diff, temp_spatial, PA_shape, abund_enviro){
     if (PA_shape == "logistic_prev") {
       #JS: relaxes logistic a little bit, by specifing reduced prevalence and fitting beta (test diff prevalence values, but 0.5 seems realistic)
       suitability_PA <- virtualspecies::convertToPA(envirosuitability, PA.method = "probability", beta = "random",
-                                                    alpha = -0.3, species.prevalence = 0.5, plot = TRUE)
+                                                    alpha = -0.3, species.prevalence = 0.5, plot = FALSE)
       # plotSuitabilityToProba(suitability_PA) #Let's you plot the shape of conversion function
     }
     if (PA_shape == "linear") {
@@ -124,17 +117,17 @@ SimulateWorld <- function(temp_diff, temp_spatial, PA_shape, abund_enviro){
   #----Create abundance as a function of the environment----
   if (abund_enviro == "lnorm_low") {
     # SB: values in Ecography paper. I think initially they were based on flounder in EBS but not sure if I edited them
-    grid$abundance <- ifelse(grid$pres==1,rlnorm(400,2,0.1)*grid$suitability,0)
+    grid$abundance <- ifelse(grid$pres==1,rlnorm(nrow(grid),2,0.1)*grid$suitability,0)
   }
   if (abund_enviro == "lnorm_high") {
     # EW: I'm cranking up the rlnorm parameters to make it more comparable to wc trawl survey estimates -- these new ones based on arrowtooth
     # SB: rlnorm parameters (6,1) were too large for estimation model. GAMs had explained deviance <10%. Other suggestions?
-    grid$abundance <- ifelse(grid$pres==1,rlnorm(400,6,1)*grid$suitability,0)
+    grid$abundance <- ifelse(grid$pres==1,rlnorm(nrow(grid),6,1)*grid$suitability,0)
   }
   if (abund_enviro == "poisson") {
     # JS: sample from a Poisson distbn, with suitability proportional to mean (slower, bc it re-samples distbn for each observation)
-    maxN <- 50  #max mean abundance at highest suitability
-    grid$abundance <- ifelse(grid$pres==1,rpois(400,lambda=grid$suitability*maxN),0)
+    maxN <- 20  #max mean abundance at highest suitability
+    grid$abundance <- ifelse(grid$pres==1,rpois(nrow(grid),lambda=grid$suitability*maxN),0)
   } 
  
   grid$year <- ifelse(grid$year<=20,grid$year + 2000, grid$year + 2000) #give years meaning: observed years 2000-2020, forecast years 2021-2100.
