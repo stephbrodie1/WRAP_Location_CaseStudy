@@ -16,13 +16,31 @@ library(viridis)
 library(BBmisc)
 library(neuralnet)
 source('WRAP_Location_CaseStudy/SimulatedWorld_Function.R') #load simulation function
+source('WRAP_Location_CaseStudy/SimulatedWorld_ROMS_Function.R') #load ROMS simulation function
 
 #-----Simulate data----
-dat <- SimulateWorld(temp_diff = 4,  temp_spatial = "matern", PA_shape = "logistic", abund_enviro = "lnorm_low") #takes a few minutes
-#SB's original: temp_diff = 4, temp_spatial = "simple", PA_shape = "logistic", abund_enviro = "lnorm_low"
-#EW's update: temp_diff = 4, temp_spatial = "matern", PA_shape = "logistic", abund_enviro = "lnorm_high"
-#JS's sim: temp_diff = 2, temp_spatial = "matern", PA_shape = "linear", abund_enviro = "poisson"
+#Run a function that simulates species distribution and abundance
+#IMPORTANT:
+#There are two simulation functions that can be built. One uses ROMS (SimulatedWorld_ROMS_Function.R), one uses simulated environmental data (SimulatedWorld_Function.R):
+
+#Set parameters for functions
+abund_enviro <- "lnorm_low" #can be "lnorm_low" (SB); "lnorm_high" (EW); or "poisson" (JS)
+PA_shape <- "logistic" #can be "logistic" (SB); "linear" (JS)
+temp_spatial <- "matern" #can be "simple" (SB); or "matern" (EW)
+temp_diff <- 4 #can be 2 or 4 degrees
+dir <- "~/Dropbox/WRAP Location^3/Rasters_2d_monthly/" #directory where ROMS data is stored (on dropbox, email steph for access)
+
+#Run this function
+dat <- SimulateWorld_ROMS(PA_shape = PA_shape, abund_enviro = abund_enviro, dir = dir ) #takes a few mins
+#OR this function
+dat <- SimulateWorld(temp_diff = temp_diff,  temp_spatial = temp_spatial, PA_shape = PA_shape, abund_enviro = abund_enviro) #takes a few minutes
+
+#make headers consistent (Steph needs to update functions to fix this)
 colnames(dat)[1:2] <- c("Lon","Lat")
+names(dat)[names(dat) == 'sst'] <- 'temp' #matching roms names. Quick temporary fix. 
+names(dat)[names(dat) == 'presabs'] <- 'pres' #matching roms names. Quick temporary fix. 
+
+#Save data
 saveRDS(dat, paste0(Sim1,'Sim1.rds')) #save data 
 # dat <- readRDS(paste0(Sim1,'Sim1.rds')) #load in data if needed
 
@@ -39,7 +57,7 @@ plot(aggregate(pres~year,dat,FUN="mean"),type="l", lwd=2,ylab="Presence",col="da
 lines(aggregate(pres~year,dat[dat$year<=2020,],FUN="mean"),col="blue")
 plot(aggregate(abundance~year,dat,FUN="sum"),type="l",  lwd=2,ylab="Abundance", col="dark grey")
 lines(aggregate(abundance~year,dat[dat$year<=2020,],FUN="sum"),col="blue")
-plot(aggregate(temp~year,dat,FUN="min"),type="l",ylab="Temperature",ylim=c(-2,15), col="dark grey")
+plot(aggregate(temp~year,dat,FUN="min"),type="l",ylab="Temperature",ylim=c(8,30), col="dark grey")
 lines(aggregate(temp~year,dat,FUN="max"),type="l",col="dark grey")
 lines(aggregate(temp~year,dat,FUN="mean"),type="l")
 
@@ -54,7 +72,7 @@ lines(aggregate(temp~year,dat,FUN="mean"),type="l")
 
 #----Build GAM Models----
 #Run if lognormal response was simulated
-if (abund_enviro = "lnorm_low" | abund_enviro = "lnorm_high"){
+if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
   dat_hist$log_abundance <- log(dat_hist$abundance)
   #SB: simple gams with gaussian process smooths
   gam1.p <- gam(pres ~ s(temp,bs='gp') , data=dat_hist, family=binomial)
@@ -90,7 +108,7 @@ dev_eval=function(model_object){
 }
 
 #Run if lognormal response was simulated
-if (abund_enviro = "lnorm_low" | abund_enviro = "lnorm_high"){
+if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
   brt1.a <- gbm.step(data=dat_hist[dat_hist$abundance>0,], gbm.x = c("temp"),gbm.y = 'log_abundance',family = "gaussian",tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6)
   brt1.p <- gbm.step(data=dat_hist, gbm.x = c("temp"),gbm.y = 'pres',family = "bernoulli",tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6)
   # saveRDS(brt1.a,paste0(Sim1,'BRT_Sim1_lognorm.rds'))
@@ -121,7 +139,7 @@ if (abund_enviro = "poisson"){
 # but will if we add more predictors later)
 
 #Run if lognormal response was simulated
-if (abund_enviro = "lnorm_low" | abund_enviro = "lnorm_high"){
+if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
   dat_norm <- dat
   dat_norm$temp <- BBmisc::normalize(dat$temp) #covariates must be normalised for MLP
   dat_norm$log_abundance <- log(dat_norm$abundance)
@@ -231,7 +249,7 @@ par(mfrow=c(1,1))
 #----Make Predictions for the future----
 
 #Run if lognormal response was simulated
-if (abund_enviro = "lnorm_low" | abund_enviro = "lnorm_high"){
+if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
   #GAM Hindcast (aka Fitted values)
   dat_hist$gam1.p <- predict(gam1.p,dat_hist,type='response')
   dat_hist$gam1.a <- predict(gam1.a,dat_hist,type="response")
@@ -292,7 +310,7 @@ if (abund_enviro = "poisson"){
 #Quick and dirty plots (will convert to ggplot at some point)
 
 #Run if lognormal response was simulated
-if (abund_enviro = "lnorm_low" | abund_enviro = "lnorm_high"){
+if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
   #Historical patterns
   plot(aggregate(abundance~year,dat_hist,FUN="sum"),type="l",  lwd=2,ylab="Abundance")
   lines(aggregate(gam1~year,dat_hist,FUN="sum"),type="l",  lwd=2,ylab="Abundance",col="blue")
@@ -335,12 +353,12 @@ if (abund_enviro = "poisson"){
 #-----Calculate and plot centre of gravity-----
 
 #Run if lognormal response was simulated
-if (abund_enviro = "lnorm_low" | abund_enviro = "lnorm_high"){
+if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
   #Historical COG
-  cog_hist_lat <- as.data.frame(matrix(NA,nrow=20,ncol=8))
+  cog_hist_lat <- as.data.frame(matrix(NA,nrow=nrow(dat_hist),ncol=8))
   colnames(cog_hist_lat) <- c("year","truth","gam1","gam1.p","brt1","brt1.p","mlp1","mlp1.p")
   counter=1
-  for (y in 2001:2020){
+  for (y in unique(dat_hist$year)){
     cog_hist_lat[counter,1] <- y
     cog_hist_lat[counter,2] <- weighted.mean(dat_hist$Lat[dat_hist$year==y],w=dat_hist$abundance[dat_hist$year==y])
     cog_hist_lat[counter,3] <- weighted.mean(dat_hist$Lat[dat_hist$year==y],w=dat_hist$gam1[dat_hist$year==y])
@@ -358,10 +376,10 @@ if (abund_enviro = "lnorm_low" | abund_enviro = "lnorm_high"){
   lines(cog_hist_lat$year,cog_hist_lat$mlp1, type='b', col="green")
   
   #Future COG
-  cog_fcast_lat <- as.data.frame(matrix(NA,nrow=80,ncol=8))
+  cog_fcast_lat <- as.data.frame(matrix(NA,nrow=nrow(dat_fcast),ncol=8))
   colnames(cog_fcast_lat) <- c("year","truth","gam1","gam1.p","brt1","brt1.p","mlp1","mlp1.p")
   counter=1
-  for (y in 2021:2100){
+  for (y in unique(dat_fcast$year)){
     cog_fcast_lat[counter,1] <- y
     cog_fcast_lat[counter,2] <- weighted.mean(dat_fcast$Lat[dat_fcast$year==y],w=dat_fcast$abundance[dat_fcast$year==y])
     cog_fcast_lat[counter,3] <- weighted.mean(dat_fcast$Lat[dat_fcast$year==y],w=dat_fcast$gam1[dat_fcast$year==y])
@@ -421,6 +439,7 @@ if (abund_enviro = "poisson"){
   lines(cog_fcast_lat$year,cog_fcast_lat$mlp2.a, type='b', col="green")
 }
 #-----Plot Surface Predictions-----
+#Note these are point predictions for the ROMS data (not a prediction on the whole surface)
 #Future
 Y = 2021
 #Truth
