@@ -1,5 +1,6 @@
 #Convert ROMS GCM netcdf files into rasters
 #Files provided by Mike Jacox. Use beyond the WRAP workshop requires permission by Mike Jacox (michael.jacox@noaa.gov)
+#Note: 1980-2010 are not observed values. 1980-present should not be compared to observations since the interannual variability will not match up (by design). 
 
 #8 covariates: sst, bottom temp, ild, chl-a surface, chl-a 50m, bottom oxygen, depth of 2.0 oxytherm, bottom depth layer (reference point)
 #3 global climate models: Hadley, IPSL, GFDL
@@ -56,14 +57,40 @@ for (f in 2:22){ #skipping bottom layer depth as it is a unique (and static)
     folder <- paste0('Rasters_2d_monthly/',gcm_folder,"/",paste(var[1],var[2],sep="_"))
     dir.create(folder, showWarnings = FALSE)
     
+    month_num <- format(as.Date(paste("1666",month[i],"06",sep="-"),"%Y-%m-%d"), "%m") #hate month digits so much.
     #create name of raster file
-    fname <- paste0(var[1],"_",var[2],"_",gcm_folder,"_",year[i],"_month",month[i],".grd")
+    fname <- paste0(var[1],"_",var[2],"_",gcm_folder,"_",year[i],"_month",month_num,".grd")
     
     #save raster
     writeRaster(r, paste0(folder,"/", fname))
   }
   nc_close(nc)
 }
+
+
+#-------Quick Data exploration-----
+#have a quick looksie at variable means etc. 
+# files_long <- list.files('2d_fields/monthly', full.names = TRUE)
+# files_short <- list.files('2d_fields/monthly', full.names = FALSE)
+# f=17 
+# nc <- nc_open(files_long[f])
+# lat <- ncvar_get(nc, 'lat'); lat <- lat[1,]
+# lon <- ncvar_get(nc, 'lon'); lon <- lon[,1]
+# year <- ncvar_get(nc, 'year') 
+# month <- ncvar_get(nc, 'month')
+# name <-  names(nc$var)[5]
+# tmp.array <- ncvar_get(nc,name)
+# 
+# test <- as.data.frame(apply(tmp.array, 3, function (x) mean(x,na.rm=T)))
+# colnames(test) <- c( "vals")
+# test$year <- year
+# test$month <- month
+# 
+# plot(test$vals~test$year)
+# plot(aggregate(vals ~ year, data = test, FUN="mean"),type='b', ylim=c(11,23), pch=19) #looking at roughly 2 degrees for SST in gfdl
+# points(aggregate(vals ~ year, data = test, FUN="min"),type='b', col="grey")
+# points(aggregate(vals ~ year, data = test, FUN="max"),type='b', col="grey")
+
 
 
 
