@@ -1,5 +1,5 @@
 #Code for Location WRAP Workshop
-#Compare models using simulated data
+#Estimation model code:
 
 #----Directories----
 #Set your working directory
@@ -247,10 +247,6 @@ plot(temp_mlp$temp_C, predict(mlp2.a, temp_mlp), type="l",
 points(dat_hist$temp, dat_hist$abundance, col="grey")
 lines(temp_mlp_hist$temp_C, predict(mlp2.a, temp_mlp_hist), lwd=2)
 par(mfrow=c(1,1))
-
-
-
-
 
 #----Make Predictions for the future----
 
