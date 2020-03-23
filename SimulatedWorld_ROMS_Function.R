@@ -17,12 +17,10 @@ SimulateWorld_ROMS <- function(PA_shape, abund_enviro, dir){
   #Assuming 400 'samples' are taken each year, from 1980-2100
   output <- as.data.frame(matrix(NA, nrow=48400,ncol=6))
   colnames(output) <- c("lon","lat","year","presabs","suitability","sst")
-
   
   #----Load in rasters----
   gcm_dr <- 'gfdl'
-  variable1 <- "sst_monthly"
-  
+
   files_sst <- list.files(paste0(dir,'gfdl/sst_monthly'), full.names = TRUE, pattern=".grd") #should be 1452 files
   months <- rep(1:12,121) 
   years <- rep(1980:2100,each=12)
