@@ -57,9 +57,8 @@ plot(aggregate(pres~year,dat,FUN="mean"),type="l", lwd=2,ylab="Presence",col="da
 lines(aggregate(pres~year,dat[dat$year<=2020,],FUN="mean"),col="blue")
 plot(aggregate(abundance~year,dat,FUN="sum"),type="l",  lwd=2,ylab="Abundance", col="dark grey")
 lines(aggregate(abundance~year,dat[dat$year<=2020,],FUN="sum"),col="blue")
-plot(aggregate(temp~year,dat,FUN="min"),type="l",ylab="Temperature",ylim=c(8,30), col="dark grey")
-lines(aggregate(temp~year,dat,FUN="max"),type="l",col="dark grey")
-lines(aggregate(temp~year,dat,FUN="mean"),type="l")
+plot(aggregate(temp~year,dat,FUN="mean"),type="l",ylab="Temperature", col="dark grey")
+
 
 #----Optional: Sampling Program----
 #Optional and up for discussion: subsetting data to simulation imperfect data collection
@@ -77,8 +76,8 @@ if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
   #SB: simple gams with gaussian process smooths
   gam1.p <- gam(pres ~ s(temp,bs='gp') , data=dat_hist, family=binomial)
   gam1.a <- gam(log_abundance ~ s(temp,bs='gp')  , data=dat_hist[dat_hist$abundance>0,], family=gaussian)
-  summary(gam1.p)
-  summary(gam1.a)
+  print(summary(gam1.p))
+  print(summary(gam1.a))
   plot(gam1.p)
   plot(gam1.a)
 }
@@ -323,7 +322,7 @@ if (abund_enviro == "lnorm_low" | abund_enviro == "lnorm_high"){
   legend("topright",c("Truth","GAM","BRT","MLP"),lty=1,col=c("black","blue","red", "green"),bty="n")
   
   #Future patterns
-  plot(aggregate(abundance~year,dat_fcast,FUN="sum"),type="l",  lwd=2,ylab="Abundance",ylim=c(0,1700))
+  plot(aggregate(abundance~year,dat_fcast,FUN="sum"),type="l",  lwd=2,ylab="Abundance")
   lines(aggregate(gam1~year,dat_fcast,FUN="sum"),type="l",  lwd=2,ylab="Abundance",col='blue')
   lines(aggregate(gam1.high~year,dat_fcast,FUN="sum"),type="l",  lwd=2,ylab="Abundance",col='light blue')
   lines(aggregate(gam1.low~year,dat_fcast,FUN="sum"),type="l",  lwd=2,ylab="Abundance",col='light blue')
