@@ -5,7 +5,7 @@
 
 #Note only using GFDL for now
 
-SimulateWorld_ROMS_multispecies <- function(PA_shape, abund_enviro, dir){
+SimulateWorld_ROMS_TrophicInteraction <- function(PA_shape, abund_enviro, dir){
   # # 'PA_shape' specifies how enviro suitability determines species presence-absence...
   # #... takes values of "logistic" (SB original), "logistic_prev" (JS, reduces knife-edge), "linear" (JS, reduces knife edge, encourages more absences)
   # # 'abund_enviro' specifies abundance if present, can be "lnorm_low" (SB original)...
@@ -77,16 +77,16 @@ SimulateWorld_ROMS_multispecies <- function(PA_shape, abund_enviro, dir){
     spB_parameters <- formatFunctions(sst = c(fun="dnorm",mean=15,sd=4),
                                       spA = c(fun="dnorm",mean=0.8,sd=1))
     spB_suitability <- generateSpFromFun(spB_stack,parameters=spB_parameters, rescale = FALSE,rescale.each.response = FALSE)
-    plot(spB_suitability$suitab.raster) #plot habitat suitability
-    virtualspecies::plotResponse(spB_suitability) #plot response curves
+    # plot(spB_suitability$suitab.raster) #plot habitat suitability
+    # virtualspecies::plotResponse(spB_suitability) #plot response curves
     
     #manually rescale
     ref_max_sst <- dnorm(spB_parameters$sst$args[1], mean=spB_parameters$sst$args[1], sd=spB_parameters$sst$args[2]) #JS/BM: potential maximum suitability based on optimum temperature
     ref_max_spA <- dnorm(spB_parameters$spA$args[1], mean=spB_parameters$spA$args[1], sd=spB_parameters$spA$args[2])
     # ref_max <- ref_max_sst * 0.5
     spB_suitability$suitab.raster <- (1/ref_max)*spB_suitability$suitab.raster #JS/BM: rescaling suitability, so the max suitbaility is only when optimum temp is encountered
-    plot(spB_suitability$suitab.raster) #plot habitat suitability
-    virtualspecies::plotResponse(spB_suitability) #plot response curves
+    # plot(spB_suitability$suitab.raster) #plot habitat suitability
+    # virtualspecies::plotResponse(spB_suitability) #plot response curves
     
     #----Convert suitability to Presence-Absence----
     if (PA_shape == "logistic") {
@@ -151,4 +151,4 @@ SimulateWorld_ROMS_multispecies <- function(PA_shape, abund_enviro, dir){
 
 
 #Example-
-test <- SimulateWorld_ROMS_multispecies(PA_shape="logisitic", abund_enviro="lnorm_low", dir <- "~/Dropbox/WRAP Location^3/Rasters_2d_monthly/")
+# test <- SimulateWorld_ROMS_multispecies(PA_shape="logisitic", abund_enviro="lnorm_low", dir <- "~/Dropbox/WRAP Location^3/Rasters_2d_monthly/")
