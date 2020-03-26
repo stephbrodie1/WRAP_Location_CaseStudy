@@ -6,7 +6,6 @@
 #Note only using GFDL for now
 
 #temporary: set directory for running an example online
-dir <- "~/Dropbox/WRAP Location^3/Rasters_2d_Spring/"
 
 
 SimulateWorld_ROMS_TrophicInteraction <- function(dir){
@@ -24,12 +23,12 @@ SimulateWorld_ROMS_TrophicInteraction <- function(dir){
   output <- as.data.frame(matrix(NA, nrow=48400,ncol=7))
   colnames(output) <- c("lon","lat","year","pres","suitability","sst", "chla")
 
-    #----Load in rasters----
+  #----Load in rasters----
   gcm_dr <- 'gfdl'
   files_sst <- list.files(paste0(dir,'gfdl/sst_monthly'), full.names = TRUE, pattern=".grd") #should be 1452 files
   files_chl <- list.files(paste0(dir,'gfdl/chl_surface'), full.names = TRUE, pattern=".grd") #should be 1452 files
   months <- rep(1:12,121) 
-  years <- rep(1980:2100,each=12)
+  years <- seq(1980,2100,1)
   
   #loop through each year
   for (y in 1:121){
@@ -85,13 +84,13 @@ SimulateWorld_ROMS_TrophicInteraction <- function(dir){
     #----Convert suitability to Presence-Absence----
     #JS: relaxes logistic a little bit, by specifing reduced prevalence and fitting beta (test diff prevalence values, but 0.5 seems realistic)
     suitability_PA <- virtualspecies::convertToPA(spB_suitability, PA.method = "probability", beta = "random",
-                                                    alpha = -0.05, species.prevalence = 0.5, plot = FALSE)
+                                                    alpha = -0.5, species.prevalence = 0.5, plot = FALSE)
     # plotSuitabilityToProba(suitability_PA) #Let's you plot the shape of conversion function
     # plot(suitability_PA$pa.raster)
     
     #-----Sample Presences and Absences-----
     presence.points <- sampleOccurrences(suitability_PA,n = 400,type = "presence-absence", 
-                                         detection.probability = 1,error.probability=0, plot = TRUE) #default but cool options to play with                                    )
+                                         detection.probability = 1,error.probability=0, plot = FALSE) #default but cool options to play with                                    )
     df <- cbind(as.data.frame(round(presence.points$sample.points$x,1)),as.data.frame(round(presence.points$sample.points$y,1)))
     colnames(df) <- c("x","y")
     
@@ -113,7 +112,9 @@ SimulateWorld_ROMS_TrophicInteraction <- function(dir){
     # SB: values in Ecography paper. I think initially they were based on flounder in EBS but not sure if I edited them
     #parameters need to be updated
     output$abundance <- ifelse(output$pres==1,rlnorm(nrow(output),2,0.1)*output$suitability,0)
+  
   return(output)
 }
 
-
+#----example-----
+# test <- SimulateWorld_ROMS_TrophicInteraction(dir = dir <- "~/Dropbox/WRAP Location^3/Rasters_2d_Spring/" )
