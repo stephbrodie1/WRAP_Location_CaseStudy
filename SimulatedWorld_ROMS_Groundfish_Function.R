@@ -59,8 +59,8 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
     #----Recruitment Index: assign response curves----
     
     #Stack rasters
-    spA_stack <- stack(sst_t1, chla_t)
-    names(spA_stack) <- c('sst_t1', 'chla_t')
+    spA_stack <- stack(sst_t1, chla_t1)
+    names(spA_stack) <- c('sst_t1', 'chla_t1')
     #Assign preferences
     spA_parameters <- formatFunctions(sst_t1 = c(fun="dnorm",mean=12,sd=3),
                                       chla_t1 = c(fun="dnorm",mean=1.6,sd=9))
@@ -116,8 +116,8 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
     output$year[se:ei] <- rep(years[y],400)
     output$pres[se:ei] <-  presence.points$sample.points$Real
     output$suitability[se:ei] <- raster::extract(spB_suitability$suitab.raster, y= df)  #extract points from suitability file
-    output$sst[se:ei] <-  raster::extract(sst, y= df)  #extract points from suitability file
-    output$chla[se:ei] <-  raster::extract(chla, y= df)
+    output$sst[se:ei] <-  raster::extract(sst_t, y= df)  #extract points from suitability file
+    output$chla[se:ei] <-  raster::extract(chla_t, y= df)
   }
   
   #----Create abundance as a function of the environment----
@@ -129,4 +129,4 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
 }
 
 #----example-----
-# test <- SimulateWorld_ROMS_TrophicInteraction(dir = dir <- "~/Dropbox/WRAP Location^3/Rasters_2d_Spring/" )
+test <- SimulateWorld_ROMS_Groundfish(dir = "~/Dropbox/WRAP Location^3/Rasters_2d_Spring/" )
