@@ -67,6 +67,31 @@ for (f in 2:22){ #skipping bottom layer depth as it is a unique (and static)
   nc_close(nc)
 }
 
+#----Create Spring Average Conditions----
+#For each year and variable, load in monthly data from April-June and average. Output to a new folder. 
+
+variables <- c("depth_oxygen","ild_0.5C","oxygen_bottom","sst_monthly","temp_bottom")
+
+for (variable in variables){
+  print(variable)
+  
+  for (i in 1:121){
+    files <- list.files(paste0('~/Dropbox/WRAP Location^3/Rasters_2d_monthly/gfdl/',variable), pattern=".grd" , full.names = T)
+    month_idx <- rep(1:12,times=121)
+    spring_months <- which(month_idx==4)
+    
+    start_indx <- spring_months[i]
+    
+    apr <- raster(files[start_indx])
+    may <- raster(files[start_indx+1])
+    jun <- raster(files[start_indx+2])
+    spring_r <- mean(apr,may,jun)
+    years <- seq(1980,2100,1)
+    writeRaster(spring_r,paste0('~/Dropbox/WRAP Location^3/Rasters_2d_Spring/gfdl/',variable,'/',variable,'_gfdl_SpringMean_',years[i],'.grd'))
+  }
+}
+
+
 
 #-------Quick Data exploration-----
 #have a quick looksie at variable means etc. 
