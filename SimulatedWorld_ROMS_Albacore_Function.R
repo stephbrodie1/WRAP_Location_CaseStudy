@@ -4,7 +4,7 @@
 
 #We include a trophic interaction between predator (albacore) and prey, but note the estmation model will use chl-a as a proxy for prey information:
 #prey: distribution and suitability driven by SST and surface Chl-a
-#predator: distribution and abundance driven by SST and Species A
+#predator: distribution and abundance driven by SST, MLD, and Species A
 
 SimulateWorld_ROMS_Albacore <- function(dir){
   #dir is the local directory that points to where ROMS data is stored 
@@ -17,14 +17,14 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   
   #----Create output file----
   #Assuming 400 'samples' are taken each year, from 1980-2100
-  output <- as.data.frame(matrix(NA, nrow=48400,ncol=7))
-  colnames(output) <- c("lon","lat","year","pres","suitability","sst", "chla")
+  output <- as.data.frame(matrix(NA, nrow=48400,ncol=8))
+  colnames(output) <- c("lon","lat","year","pres","suitability","sst","chla", "mld")
 
   #----Load in rasters----
   gcm_dr <- 'gfdl'
   files_sst <- list.files(paste0(dir,'gfdl/sst_monthly'), full.names = TRUE, pattern=".grd") #should be 1452 files
   files_chl <- list.files(paste0(dir,'gfdl/chl_surface'), full.names = TRUE, pattern=".grd") #should be 1452 files
-  months <- rep(1:12,121) 
+  files_mld <- list.files(paste0(dir,'gfdl/ild_0.5C'), full.names = TRUE, pattern=".grd")
   years <- seq(1980,2100,1)
   
   #----loop through each year----
@@ -34,8 +34,13 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     sst <- raster(files_sst[y])
     chla <- raster(files_chl[y])
     chla <- log(chla)
-    # plot(sst)
-    # plot(chla)
+    mld <- raster(files_mld[y])
+    
+    #plot environmental layers
+    # par(mfrow=c(1,3))
+    # plot(sst, main= 'SST')
+    # plot(chla, main = 'Surface Chl-a')
+    # plot(mld, main = 'MLD')
 
     #----SPECIES A (prey): assign response curves----
     #Species A: likes high chla and medium temps
@@ -44,8 +49,8 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     spA_stack <- stack(sst, chla)
     names(spA_stack) <- c('sst', 'chla')
     #Assign preferences
-    spA_parameters <- formatFunctions(sst = c(fun="dnorm",mean=12,sd=3),
-                                                  chla = c(fun="dnorm",mean=1.6,sd=9))
+    spA_parameters <- formatFunctions(sst = c(fun="dnorm",mean=13,sd=13),
+                                                  chla = c(fun="dnorm",mean=0.7,sd=1.4))
     spA_suitability <- generateSpFromFun(spA_stack,parameters=spA_parameters, rescale = FALSE,rescale.each.response = FALSE) #Important: make sure rescaling is false. Doesn't work well in the 'for' loop. 
     # plot(spA_suitability$suitab.raster) #plot habitat suitability
     # virtualspecies::plotResponse(spA_suitability) #plot response curves
@@ -58,30 +63,32 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     # plot(spA_suitability$suitab.raster) #plot habitat suitability
 
     #----SPECIES B (albacore): assign response curves----
-    #Species B: likes to eat Species A, and warmer temperatues
+    #Species B: likes to eat Species A, and warmer temperatues & shallow MLD
     
     #Stack rasters
-    spB_stack <- stack(sst, spA_suitability$suitab.raster)
-    names(spB_stack) <- c('sst', 'spA')
+    spB_stack <- stack(sst, mld ,spA_suitability$suitab.raster)
+    names(spB_stack) <- c('sst',"mld", 'spA')
     
     #Assign preferences
-    spB_parameters <- formatFunctions(sst = c(fun="dnorm",mean=15,sd=4),
-                                      spA = c(fun="dnorm",mean=0.8,sd=1))
+    spB_parameters <- formatFunctions(sst = c(fun="dnorm",mean=18,sd=9),
+                                      mld = c(fun="logisticFun",alpha=7.6,beta=50),
+                                      spA = c(fun="logisticFun",alpha=-0.1,beta=0.5))
     spB_suitability <- generateSpFromFun(spB_stack,parameters=spB_parameters, rescale = FALSE,rescale.each.response = FALSE)
     # plot(spB_suitability$suitab.raster) #plot habitat suitability
     # virtualspecies::plotResponse(spB_suitability) #plot response curves
 
     #manually rescale
     ref_max_sst <- dnorm(spB_parameters$sst$args[1], mean=spB_parameters$sst$args[1], sd=spB_parameters$sst$args[2]) #JS/BM: potential maximum suitability based on optimum temperature
-    ref_max_spA <- dnorm(spB_parameters$spA$args[1], mean=spB_parameters$spA$args[1], sd=spB_parameters$spA$args[2])
-    ref_max <- ref_max_sst * ref_max_spA
+    ref_max_mld <- 1
+    ref_max_spA <- 1
+    ref_max <- ref_max_sst * ref_max_mld * ref_max_spA
     spB_suitability$suitab.raster <- (1/ref_max)*spB_suitability$suitab.raster #JS/BM: rescaling suitability, so the max suitbaility is only when optimum temp is encountered
     # plot(spB_suitability$suitab.raster) #plot habitat suitability
 
     #----Convert suitability to Presence-Absence----
     #JS: relaxes logistic a little bit, by specifing reduced prevalence and fitting beta (test diff prevalence values, but 0.5 seems realistic)
     suitability_PA <- virtualspecies::convertToPA(spB_suitability, PA.method = "probability", beta = "random",
-                                                    alpha = -0.05, species.prevalence = 0.5, plot = FALSE)
+                                                    alpha = -0.1, species.prevalence = 0.5, plot = FALSE)
     # plotSuitabilityToProba(suitability_PA) #Let's you plot the shape of conversion function
     # plot(suitability_PA$pa.raster)
     
@@ -102,12 +109,13 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     output$suitability[se:ei] <- raster::extract(spB_suitability$suitab.raster, y= df)  #extract points from suitability file
     output$sst[se:ei] <-  raster::extract(sst, y= df)  #extract points from suitability file
     output$chla[se:ei] <-  raster::extract(chla, y= df)
+    output$mld[se:ei] <-  raster::extract(mld, y= df)
   }
   
   #----Create abundance as a function of the environment----
     # SB: values in Ecography paper. Initially based on EBS flounder.
     #parameters need to be updated with species specific info
-    output$abundance <- ifelse(output$pres==1,rlnorm(nrow(output),2,0.1)*output$suitability,0)
+    output$abundance <- ifelse(output$pres==1,rlnorm(nrow(output),6,1)*output$suitability,0)
   
   return(output)
 }
