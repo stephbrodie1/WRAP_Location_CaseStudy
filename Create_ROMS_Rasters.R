@@ -24,7 +24,7 @@ library(raster)
 files_long <- list.files('2d_fields/monthly', full.names = TRUE)
 files_short <- list.files('2d_fields/monthly', full.names = FALSE)
 
-for (f in 2:22){ #skipping bottom layer depth as it is a unique (and static)
+for (f in 20:22){ #skipping bottom layer depth as it is a unique (and static)
   print(files_long[f])
   nc <- nc_open(files_long[f])
   # print(nc) #run if you want more details on file
@@ -70,13 +70,13 @@ for (f in 2:22){ #skipping bottom layer depth as it is a unique (and static)
 #----Create Spring Average Conditions----
 #For each year and variable, load in monthly data from April-June and average. Output to a new folder. 
 
-variables <- c("depth_oxygen","ild_0.5C","oxygen_bottom","sst_monthly","temp_bottom")
+variables <- c("chl_50m","chl_surface","depth_oxygen","ild_0.5C","oxygen_bottom","ssh_monthly","sst_monthly","temp_bottom","zoo_200m","zoo_50m")
 
 for (variable in variables){
   print(variable)
   
   for (i in 1:121){
-    files <- list.files(paste0('~/Dropbox/WRAP Location^3/Rasters_2d_monthly/gfdl/',variable), pattern=".grd" , full.names = T)
+    files <- list.files(paste0('~/Dropbox/WRAP Location^3/Rasters_2d_monthly/had/',variable), pattern=".grd" , full.names = T)
     month_idx <- rep(1:12,times=121)
     spring_months <- which(month_idx==4)
     
@@ -87,21 +87,19 @@ for (variable in variables){
     jun <- raster(files[start_indx+2])
     spring_r <- mean(apr,may,jun)
     years <- seq(1980,2100,1)
-    writeRaster(spring_r,paste0('~/Dropbox/WRAP Location^3/Rasters_2d_Spring/gfdl/',variable,'/',variable,'_gfdl_SpringMean_',years[i],'.grd'))
+    writeRaster(spring_r,paste0('~/Dropbox/WRAP Location^3/Rasters_2d_Spring/had/',variable,'/',variable,'_had_SpringMean_',years[i],'.grd'))
   }
 }
 
-
-
-#-------Quick Data exploration-----
-#have a quick looksie at variable means etc. 
-# files_long <- list.files('2d_fields/monthly', full.names = TRUE)
-# files_short <- list.files('2d_fields/monthly', full.names = FALSE)
-# f=17 
+# #-------Quick Data exploration-----
+# #have a quick looksie at variable means etc. 
+# files_long <- list.files('~/Dropbox/WRAP Location^3/2d_fields/monthly/', full.names = TRUE, )
+# files_short <- list.files('~/Dropbox/WRAP Location^3/2d_fields/monthly/', full.names = FALSE)
+# f=6
 # nc <- nc_open(files_long[f])
 # lat <- ncvar_get(nc, 'lat'); lat <- lat[1,]
 # lon <- ncvar_get(nc, 'lon'); lon <- lon[,1]
-# year <- ncvar_get(nc, 'year') 
+# year <- ncvar_get(nc, 'year')
 # month <- ncvar_get(nc, 'month')
 # name <-  names(nc$var)[5]
 # tmp.array <- ncvar_get(nc,name)
@@ -112,9 +110,10 @@ for (variable in variables){
 # test$month <- month
 # 
 # plot(test$vals~test$year)
-# plot(aggregate(vals ~ year, data = test, FUN="mean"),type='b', ylim=c(11,23), pch=19) #looking at roughly 2 degrees for SST in gfdl
+# plot(aggregate(vals ~ year, data = test, FUN="mean"),type='b', pch=19, ylab="Mean Surface Chl-a") #looking at roughly 2 degrees for SST in gfdl
 # points(aggregate(vals ~ year, data = test, FUN="min"),type='b', col="grey")
 # points(aggregate(vals ~ year, data = test, FUN="max"),type='b', col="grey")
+# # 
 
 
 
