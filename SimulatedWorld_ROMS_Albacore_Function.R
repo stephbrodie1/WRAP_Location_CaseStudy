@@ -6,8 +6,6 @@
 #prey: distribution and suitability driven by SST and zooplankton integrated across top 200m
 #predator: distribution and abundance driven by SST, MLD, and Species A
 
-dir <- "~/Dropbox/WRAP Location^3/Rasters_2d_Spring/had/" #local directory where ROMS data is stored
-
 SimulateWorld_ROMS_Albacore <- function(dir){
   #dir is the local directory that points to where ROMS data is stored 
 
