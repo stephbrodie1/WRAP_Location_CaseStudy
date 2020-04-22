@@ -125,7 +125,6 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   }
   
   #Average monthly biomass available to CCS is: 1.18x10^5 ± (0.13x10^5 se) mt (from Desiree Tommasi)
-  n_pres <- length(which(output$pres == 1))
   mean_spatial <- round(118000/140, 1) 
   se_spatial <- round((13000/140) ,2) 
   output$abundance <- ifelse(output$pres==1,rnorm(nrow(output),mean_spatial, se_spatial)*output$suitability,0)
