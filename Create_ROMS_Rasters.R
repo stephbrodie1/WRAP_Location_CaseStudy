@@ -18,15 +18,17 @@ setwd(wd)
 #----load library----
 library(ncdf4)
 library(raster)
+library(tidync)
 
 #-----Load in Dropbox files----
 #note: download files locally. Netcdfs are contained in a folder called 2d_fields
-files_long <- list.files('2d_fields/monthly', full.names = TRUE)
+files_long <- list.files('2d_fields/monthly/', full.names = TRUE)
 files_short <- list.files('2d_fields/monthly', full.names = FALSE)
 
-for (f in 20:22){ #skipping bottom layer depth as it is a unique (and static)
+for (f in c(2:33)){ #skipping bottom layer depth as it is a unique (and static)
   print(files_long[f])
   nc <- nc_open(files_long[f])
+  
   # print(nc) #run if you want more details on file
   lat <- ncvar_get(nc, 'lat'); lat <- lat[1,]
   lon <- ncvar_get(nc, 'lon'); lon <- lon[,1]
@@ -42,6 +44,9 @@ for (f in 20:22){ #skipping bottom layer depth as it is a unique (and static)
                 ymn=min(lat), ymx=max(lat), 
                 crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
     r <- flip(r,2)
+    #Forcing resolution our ROMS template (a quick fix to resolve grid edge vs. mid point)
+    template = raster('~/Dropbox/Eco-ROMS/ROMS & Bathym Data/Bathymetry ETOPO1/template.grd')
+    r <- raster::resample(r, template, method="bilinear")  
     # plot(r)
     
     #create nested folders to save files
@@ -57,12 +62,12 @@ for (f in 20:22){ #skipping bottom layer depth as it is a unique (and static)
     folder <- paste0('Rasters_2d_monthly/',gcm_folder,"/",paste(var[1],var[2],sep="_"))
     dir.create(folder, showWarnings = FALSE)
     
-    month_num <- format(as.Date(paste("1666",month[i],"06",sep="-"),"%Y-%m-%d"), "%m") #hate month digits so much.
+    month_num <- format(as.Date(paste("1666",month[i],"06",sep="-"),"%Y-%m-%d"), "%m")
     #create name of raster file
     fname <- paste0(var[1],"_",var[2],"_",gcm_folder,"_",year[i],"_month",month_num,".grd")
     
     #save raster
-    writeRaster(r, paste0(folder,"/", fname))
+    writeRaster(r, paste0(folder,"/", fname), overwrite=TRUE)
   }
   nc_close(nc)
 }
@@ -76,7 +81,7 @@ for (variable in variables){
   print(variable)
   
   for (i in 1:121){
-    files <- list.files(paste0('~/Dropbox/WRAP Location^3/Rasters_2d_monthly/had/',variable), pattern=".grd" , full.names = T)
+    files <- list.files(paste0('~/Dropbox/WRAP Location^3/Rasters_2d_monthly/gfdl/',variable), pattern=".grd" , full.names = T)
     month_idx <- rep(1:12,times=121)
     spring_months <- which(month_idx==4)
     
@@ -87,7 +92,7 @@ for (variable in variables){
     jun <- raster(files[start_indx+2])
     spring_r <- mean(apr,may,jun)
     years <- seq(1980,2100,1)
-    writeRaster(spring_r,paste0('~/Dropbox/WRAP Location^3/Rasters_2d_Spring/had/',variable,'/',variable,'_had_SpringMean_',years[i],'.grd'))
+    writeRaster(spring_r,paste0('~/Dropbox/WRAP Location^3/Rasters_2d_Spring/gfdl/',variable,'/',variable,'_gfdl_SpringMean_',years[i],'.grd'), overwrite=TRUE)
   }
 }
 
