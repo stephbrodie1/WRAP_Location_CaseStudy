@@ -16,10 +16,9 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   library(glmmfields)
   
   #----Create output file----
-  #Assuming 400 'samples' are taken each year, from 1980-2100
-  #This will be the information passed to the estimation model
-  output <- as.data.frame(matrix(NA, nrow=48400,ncol=9))
-  colnames(output) <- c("lon","lat","year","pres","suitability","sst","zoo_200","chla_surface", "mld")
+  nsamples <- 500  #number of samples to use in the estimation model
+  output <- as.data.frame(matrix(NA, nrow=(21912*121), ncol=10))  #21912 non-NA grid cells in ROMS
+  colnames(output) <- c("lon","lat","year","pres","suitability","sample","sst","zoo_200","chla_surface", "mld")
 
   #----Load in rasters----
   #These are the average spring conditions from the downscaled gfdl earth system model
@@ -103,25 +102,34 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     # plot(suitability_PA$pa.raster)
     
     #-----Sample Presences and Absences-----
-    presence.points <- sampleOccurrences(suitability_PA,n = 400,type = "presence-absence",
+    presence.points <- sampleOccurrences(suitability_PA,n = nsamples,type = "presence-absence",
                                          detection.probability = 1,error.probability=0, plot = FALSE,
-                                         sample.prevalence = 0.5) #default but cool options to play with                                    )
-    df <- cbind(as.data.frame(round(presence.points$sample.points$x,1)),as.data.frame(round(presence.points$sample.points$y,1)))
-    colnames(df) <- c("x","y")
+                                         sample.prevalence = NULL)
+    #convert to dataframe
+    pres_df <- cbind(as.data.frame(presence.points$sample.points$x),as.data.frame(presence.points$sample.points$y))
+    colnames(pres_df) <- c("x","y")
+    pres_df$sample <- 1
+    
+    #expand dataframe to include all possible locations
+    df_full <- as.data.frame(rasterToPoints(sst)[,1:2])
+    df_full_2 <- left_join(df_full, pres_df, by=c('x','y'))
+    df_full_2$sample <- ifelse(is.na(df_full_2$sample),0,df_full_2$sample)
+    
     
     #----Extract data for each year----
     print("Extracting suitability")
-    ei <- 400*y #end location in output grid to index to
-    se <- ei - 399 #start location in output grid to index to
-    output$lat[se:ei] <- df$y
-    output$lon[se:ei] <- df$x
-    output$year[se:ei] <- rep(years[y],400)
-    output$pres[se:ei] <- presence.points$sample.points$Real
-    output$suitability[se:ei] <- raster::extract(spB_suitability$suitab.raster, y= df)  #extract points from suitability file
-    output$sst[se:ei] <-  raster::extract(sst, y= df)  #extract points from suitability file
-    output$zoo_200[se:ei] <-  raster::extract(zoo, y= df)
-    output$chla_surface[se:ei] <-  raster::extract(chla_surface, y= df)
-    output$mld[se:ei] <-  raster::extract(mld, y= df)
+    ei <- 21912*y #end location in output grid to index to
+    se <- ei - (21912-1) #start location in output grid to index to
+    output$lat[se:ei] <- rasterToPoints(sst)[,2] #using sst as an example raster 
+    output$lon[se:ei] <- rasterToPoints(sst)[,1]
+    output$year[se:ei] <- rep(years[y],21912)
+    output$pres[se:ei] <- rasterToPoints(suitability_PA$pa.raster)[,3] 
+    output$suitability[se:ei] <- rasterToPoints(spB_suitability$suitab.raster)[,3]  #extract points from suitability file
+    output$sample <-   df_full_2$sample
+    output$sst[se:ei] <-  rasterToPoints(sst)[,3]  #extract points from suitability file
+    output$zoo_200[se:ei] <-  rasterToPoints(zoo)[,3]
+    output$chla_surface[se:ei] <-  rasterToPoints(chla_surface)[,3]
+    output$mld[se:ei] <-  rasterToPoints(mld)[,3]
   }
   
   #Average monthly biomass available to CCS is: 1.18x10^5 ± (0.13x10^5 se) mt (from Desiree Tommasi)
@@ -129,5 +137,8 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   se_spatial <- round((13000/140) ,2) 
   output$abundance <- ifelse(output$pres==1,rnorm(nrow(output),mean_spatial, se_spatial)*output$suitability,0)
 
+  print('Saving csv to working directory')
+  write.csv(output, 'Albacore_OM_Simulation.csv',row.names = FALSE)
   return(output)
 }
+
