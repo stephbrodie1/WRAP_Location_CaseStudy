@@ -111,7 +111,6 @@ SimulateWorld_ROMS_Anchovy <- function(dir){
     output$chla_surface[se:ei] <-  raster::extract(chla, y= df[,1:2])
     output$zoo[se:ei] <-  raster::extract(zoo, y= df[,1:2])
     output$z[se:ei] <-  raster::extract(z, y= df[,1:2])
-    output$abundance[se:ei] <- df$abundance
     
   }
   
