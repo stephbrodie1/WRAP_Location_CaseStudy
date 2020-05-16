@@ -18,7 +18,7 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   #----Create output file----
   nsamples <- 500  #number of samples to use in the estimation model
   output <- as.data.frame(matrix(NA, nrow=(21912*121), ncol=10))  #21912 non-NA grid cells in ROMS
-  colnames(output) <- c("lon","lat","year","pres","suitability","sample","sst","zoo_200","chla_surface", "mld")
+  colnames(output) <- c("lon","lat","year","pres","suitability","sst","zoo_200","chla_surface", "mld", "sample")
 
   #----Load in rasters----
   #These are the average spring conditions from the downscaled gfdl earth system model
@@ -30,6 +30,7 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   
   #----Loop through each year----
   for (y in 1:121){
+    set.seed(y)
     print(paste0("Creating environmental simulation for Year ",years[y]))
     
     #Load in environmental rasters for a specific year
@@ -55,9 +56,11 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     names(spA_stack) <- c('sst', 'zoo')
     
     #Assign preferences
-    spA_parameters <- formatFunctions(sst = c(fun="dnorm",mean=15,sd=5),
-                                      zoo = c(fun="logisticFun",alpha=-6,beta=50))
-    spA_suitability <- generateSpFromFun(spA_stack,parameters=spA_parameters, rescale = FALSE,rescale.each.response = FALSE) #Important: make sure rescaling is false. Doesn't work well in the 'for' loop.
+    spA_parameters <- formatFunctions(sst = c(fun="dnorm",mean=14,sd=4),
+                                      zoo = c(fun="logisticFun",alpha=-10,beta=45))
+    spA_suitability <- generateSpFromFun(spA_stack,parameters=spA_parameters,
+                                         rescale = FALSE,rescale.each.response = FALSE,
+                                         species.type="multiplicative") #Important: make sure rescaling is false. Doesn't work well in the 'for' loop.
     # plot(spA_suitability$suitab.raster) #plot habitat suitability
     # virtualspecies::plotResponse(spA_suitability) #plot response curves
 
@@ -77,12 +80,14 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     names(spB_stack) <- c('sst',"mld", "spA")
     
     #Assign preferences
-    spB_parameters <- formatFunctions(sst = c(fun="dnorm",mean=17,sd=5),
-                                      mld = c(fun="dnorm",mean=50,sd=25),
-                                      spA = c(fun="logisticFun",alpha=-0.05,beta=0.5))
-    spB_suitability <- generateSpFromFun(spB_stack,parameters=spB_parameters, rescale = FALSE,rescale.each.response = FALSE)
-    # plot(spB_suitability$suitab.raster) #plot habitat suitability
-    # virtualspecies::plotResponse(spB_suitability) #plot response curves
+    spB_parameters <- formatFunctions(sst = c(fun="dnorm",mean=17,sd=4),
+                                      mld = c(fun="dnorm",mean=50,sd=30),
+                                      spA = c(fun="logisticFun",alpha=-0.15,beta=0.4))
+    spB_suitability <- generateSpFromFun(spB_stack,parameters=spB_parameters, 
+                                         rescale = FALSE,rescale.each.response = FALSE,
+                                         species.type = "multiplicative")
+    plot(spB_suitability$suitab.raster) #plot habitat suitability
+    virtualspecies::plotResponse(spB_suitability) #plot response curves
 
     #manually rescale
     ref_max_sst <- dnorm(spB_parameters$sst$args[1], mean=spB_parameters$sst$args[1], sd=spB_parameters$sst$args[2]) #JS/BM: potential maximum suitability based on optimum temperature
@@ -96,14 +101,14 @@ SimulateWorld_ROMS_Albacore <- function(dir){
         #----Convert suitability to Presence-Absence----
     #Use a specific function to convert suitability (0-1) to presence or absence (1 or 0)
     
-    suitability_PA <- virtualspecies::convertToPA(spB_suitability, PA.method = "probability", beta = 0.5,
-                                                  alpha = -0.05, species.prevalence = NULL, plot = FALSE)
+    suitability_PA <- virtualspecies::convertToPA(spB_suitability, PA.method = "probability", beta = 0.4,
+                                                  alpha = -0.07, species.prevalence = NULL, plot = FALSE)
     # plotSuitabilityToProba(suitability_PA) #Let's you plot the shape of conversion function
     # plot(suitability_PA$pa.raster)
     
     #-----Sample Presences and Absences-----
     presence.points <- sampleOccurrences(suitability_PA,n = nsamples,type = "presence-absence",
-                                         detection.probability = 1,error.probability=0, plot = FALSE,
+                                         detection.probability = 1,error.probability=0, plot = TRUE,
                                          sample.prevalence = NULL)
     #convert to dataframe
     pres_df <- cbind(as.data.frame(presence.points$sample.points$x),as.data.frame(presence.points$sample.points$y))
@@ -114,7 +119,8 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     df_full <- as.data.frame(rasterToPoints(sst)[,1:2])
     df_full_2 <- left_join(df_full, pres_df, by=c('x','y'))
     df_full_2$sample <- ifelse(is.na(df_full_2$sample),0,df_full_2$sample)
-    
+    df_full_2$lon <- df_full_2$x
+    df_full_2$lat <- df_full_2$y
     
     #----Extract data for each year----
     print("Extracting suitability")
@@ -125,11 +131,12 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     output$year[se:ei] <- rep(years[y],21912)
     output$pres[se:ei] <- rasterToPoints(suitability_PA$pa.raster)[,3] 
     output$suitability[se:ei] <- rasterToPoints(spB_suitability$suitab.raster)[,3]  #extract points from suitability file
-    output$sample <-   df_full_2$sample
     output$sst[se:ei] <-  rasterToPoints(sst)[,3]  #extract points from suitability file
     output$zoo_200[se:ei] <-  rasterToPoints(zoo)[,3]
     output$chla_surface[se:ei] <-  rasterToPoints(chla_surface)[,3]
     output$mld[se:ei] <-  rasterToPoints(mld)[,3]
+    temp <-   left_join(output[se:ei,1:9], df_full_2[,c(3,4,5)], by=c('lon','lat'))
+    output$sample[se:ei] <- temp$sample
   }
   
   #Average monthly biomass available to CCS is: 1.18x10^5 ± (0.13x10^5 se) mt (from Desiree Tommasi)
@@ -138,7 +145,7 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   output$abundance <- ifelse(output$pres==1,rnorm(nrow(output),mean_spatial, se_spatial)*output$suitability,0)
 
   print('Saving csv to working directory')
-  write.csv(output, 'Albacore_OM_Simulation.csv',row.names = FALSE)
+  # write.csv(output, 'Albacore_OM_Simulation.csv',row.names = FALSE)
   return(output)
 }
 
