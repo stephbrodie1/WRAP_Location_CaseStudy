@@ -4,6 +4,7 @@
 
 ## Code by Lewis Barnett and James Smith
 
+#Note: abundance models are normally distributed, not lognormally. SB has corrected instances but may have missed some (sdmTMB won't install to check)
 
   #'dat' are all the observations from the OM
   #'year_fcast' is the year used to split historical (fitting) and forecast (testing) data
