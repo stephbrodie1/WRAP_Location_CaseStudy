@@ -28,17 +28,17 @@ if ("E" %in% covs) {
     
     brt_E_N <- gbm.step(data=dat_hist[dat_hist$abundance>0,], 
                        gbm.x = gbm.x.env,
-                       gbm.y = 'abundance',
+                       gbm.y = 'log_abundance',
                        family = "gaussian",
                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
                        plot.main=FALSE, verbose = FALSE)
     
     presx <- predict(brt_E_P, dat_hist, n.trees=brt_E_P$gbm.call$best.trees, type="response")
-    abundx <- predict(brt_E_N, dat_hist, n.trees=brt_E_N$gbm.call$best.trees, type="response")
+    abundx <- exp(predict(brt_E_N, dat_hist, n.trees=brt_E_N$gbm.call$best.trees, type="response"))
     dat_hist$brt_E <- presx * abundx
     
     presx <- predict(brt_E_P, dat_fcast, n.trees=brt_E_P$gbm.call$best.trees, type="response")
-    abundx <- predict(brt_E_N, dat_fcast, n.trees=brt_E_N$gbm.call$best.trees, type="response")
+    abundx <- exp(predict(brt_E_N, dat_fcast, n.trees=brt_E_N$gbm.call$best.trees, type="response"))
     dat_fcast$brt_E <- presx * abundx
   }
 }
@@ -55,17 +55,17 @@ if ("S" %in% covs) {
     
     brt_S_N <- gbm.step(data=dat_hist[dat_hist$abundance>0,], 
                         gbm.x = c("lat", "lon"),
-                        gbm.y = 'abundance',
+                        gbm.y = 'log_abundance',
                         family = "gaussian",
                         tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
                         plot.main=FALSE, verbose = FALSE)
     
     presx <- predict(brt_S_P, dat_hist, n.trees=brt_S_P$gbm.call$best.trees, type="response")
-    abundx <- predict(brt_S_N, dat_hist, n.trees=brt_S_N$gbm.call$best.trees, type="response")
+    abundx <- exp(predict(brt_S_N, dat_hist, n.trees=brt_S_N$gbm.call$best.trees, type="response"))
     dat_hist$brt_S <- presx * abundx
     
     presx <- predict(brt_S_P, dat_fcast, n.trees=brt_S_P$gbm.call$best.trees, type="response")
-    abundx <- predict(brt_S_N, dat_fcast, n.trees=brt_S_N$gbm.call$best.trees, type="response")
+    abundx <- exp(predict(brt_S_N, dat_fcast, n.trees=brt_S_N$gbm.call$best.trees, type="response"))
     dat_fcast$brt_S <- presx * abundx
   }
 }
@@ -82,17 +82,17 @@ if ("ES" %in% covs) {
     
     brt_ES_N <- gbm.step(data=dat_hist[dat_hist$abundance>0,], 
                         gbm.x = c(gbm.x.env, "lat", "lon"),
-                        gbm.y = 'abundance',
+                        gbm.y = 'log_abundance',
                         family = "gaussian",
                         tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
                         plot.main=FALSE, verbose = FALSE)
     
     presx <- predict(brt_ES_P, dat_hist, n.trees=brt_ES_P$gbm.call$best.trees, type="response")
-    abundx <- predict(brt_ES_N, dat_hist, n.trees=brt_ES_N$gbm.call$best.trees, type="response")
+    abundx <- exp(predict(brt_ES_N, dat_hist, n.trees=brt_ES_N$gbm.call$best.trees, type="response"))
     dat_hist$brt_ES <- presx * abundx
     
     presx <- predict(brt_ES_P, dat_fcast, n.trees=brt_ES_P$gbm.call$best.trees, type="response")
-    abundx <- predict(brt_ES_N, dat_fcast, n.trees=brt_ES_N$gbm.call$best.trees, type="response")
+    abundx <- exp(predict(brt_ES_N, dat_fcast, n.trees=brt_ES_N$gbm.call$best.trees, type="response"))
     dat_fcast$brt_ES <- presx * abundx
   }
 }
@@ -109,17 +109,17 @@ if ("EST" %in% covs) {
     
     brt_EST_N <- gbm.step(data=dat_hist[dat_hist$abundance>0,], 
                         gbm.x = c(gbm.x.env, "lat", "lon", "year"),
-                        gbm.y = 'abundance',
+                        gbm.y = 'log_abundance',
                         family = "gaussian",
                         tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
                         plot.main=FALSE, verbose = FALSE)
     
     presx <- predict(brt_EST_P, dat_hist, n.trees=brt_EST_P$gbm.call$best.trees, type="response")
-    abundx <- predict(brt_EST_N, dat_hist, n.trees=brt_EST_N$gbm.call$best.trees, type="response")
+    abundx <- exp(predict(brt_EST_N, dat_hist, n.trees=brt_EST_N$gbm.call$best.trees, type="response"))
     dat_hist$brt_EST <- presx * abundx
     
     presx <- predict(brt_EST_P, dat_fcast, n.trees=brt_EST_P$gbm.call$best.trees, type="response")
-    abundx <- predict(brt_EST_N, dat_fcast, n.trees=brt_EST_N$gbm.call$best.trees, type="response")
+    abundx <- exp(predict(brt_EST_N, dat_fcast, n.trees=brt_EST_N$gbm.call$best.trees, type="response"))
     dat_fcast$brt_EST <- presx * abundx
   }
 }

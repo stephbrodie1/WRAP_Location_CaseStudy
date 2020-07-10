@@ -21,7 +21,7 @@
 
   tw_formula <- formula(paste("abundance ~", env_formula))
   delta1_formula <- formula(paste("pres ~", env_formula))
-  delta2_formula <- formula(paste("abundance ~", env_formula))
+  delta2_formula <- formula(paste("log_abundance ~", env_formula))
   
     if ("E" %in% covs) {  #Enviro only
     print("Fitting GAM-E")
@@ -40,11 +40,11 @@
       #plot(gam_E_N, pages=1)
       
       presx <- predict(gam_E_P, dat_hist, type="response")
-      abundx <- predict(gam_E_N, dat_hist, type="response") 
+      abundx <- exp(predict(gam_E_N, dat_hist, type="response"))
       dat_hist$gam_E <- presx * abundx
       
       presx <- predict(gam_E_P, dat_fcast, type="response")
-      abundx <- predict(gam_E_N, dat_fcast, type="response")
+      abundx <- exp(predict(gam_E_N, dat_fcast, type="response"))
       dat_fcast$gam_E <- presx * abundx
       
       # presx <- predict(gam_E_P, dat, type="response")
@@ -65,15 +65,15 @@
     if (type == "delta") {
       gam_S_P <- gam(pres ~ s(lat,lon), data=dat_hist, family=binomial)
       #plot(gam_ST_P, pages=1)
-      gam_S_N <- gam(abundance ~ s(lat,lon), data=dat_hist[dat_hist$abundance>0,], family=gaussian)
+      gam_S_N <- gam(log_abundance ~ s(lat,lon), data=dat_hist[dat_hist$abundance>0,], family=gaussian)
       #plot(gam_ST_N, pages=1)
       
       presx <- predict(gam_S_P, dat_hist, type="response")
-      abundx <- predict(gam_S_N, dat_hist, type="response")
+      abundx <- exp(predict(gam_S_N, dat_hist, type="response"))
       dat_hist$gam_S <- presx * abundx
       
       presx <- predict(gam_S_P, dat_fcast, type="response")
-      abundx <- predict(gam_S_N, dat_fcast, type="response")
+      abundx <- exp(predict(gam_S_N, dat_fcast, type="response"))
       dat_fcast$gam_S <- presx * abundx
     }
   }
@@ -94,11 +94,11 @@
       #plot(gam_ES_N)
       
       presx <- predict(gam_ES_P, dat_hist, type="response")
-      abundx <- predict(gam_ES_N, dat_hist, type="response")
+      abundx <- exp(predict(gam_ES_N, dat_hist, type="response"))
       dat_hist$gam_ES <- presx * abundx
       
       presx <- predict(gam_ES_P, dat_fcast, type="response")
-      abundx <- predict(gam_ES_N, dat_fcast, type="response")
+      abundx <- exp(predict(gam_ES_N, dat_fcast, type="response"))
       dat_fcast$gam_ES <- presx * abundx
     }
   }
@@ -119,11 +119,11 @@
       #plot(gam_EST_N, pages=1)
       
       presx <- predict(gam_EST_P, dat_hist, type="response")
-      abundx <- predict(gam_EST_N, dat_hist, type="response")
+      abundx <- exp(predict(gam_EST_N, dat_hist, type="response"))
       dat_hist$gam_EST <- presx * abundx
       
       presx <- predict(gam_EST_P, dat_fcast, type="response")
-      abundx <- predict(gam_EST_N, dat_fcast, type="response")
+      abundx <- exp(predict(gam_EST_N, dat_fcast, type="response"))
       dat_fcast$gam_EST <- presx * abundx
     }
   }
@@ -147,11 +147,11 @@
       #plot(gam_ECor_N$gam, pages=1)
       
       presx <- predict(gam_ECor_P$gam, dat_hist, type="response")
-      abundx <- predict(gam_ECor_N$gam, dat_hist, type="response")
+      abundx <- exp(predict(gam_ECor_N$gam, dat_hist, type="response"))
       dat_hist$gam_ECor <- presx * abundx
       
       presx <- predict(gam_ECor_P$gam, dat_fcast, type="response")
-      abundx <- predict(gam_ECor_N$gam, dat_fcast, type="response")
+      abundx <- exp(predict(gam_ECor_N$gam, dat_fcast, type="response"))
       dat_fcast$gam_ECor <- presx * abundx
     }
   }

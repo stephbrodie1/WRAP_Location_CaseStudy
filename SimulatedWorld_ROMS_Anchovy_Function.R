@@ -11,15 +11,15 @@ SimulateWorld_ROMS_Anchovy <- function(dir){
   library(virtualspecies)
   library(scales)
   library(raster)
-  library(glmmfields)
+  # library(glmmfields)
   library(dplyr)
   
   #----Create output file----
   #This will be the information passed to the estimation model
   nsamples <- 500  #number of samples to use in the estimation model
-  gridcells <- 7612 #number of grid cells in ROMS (NAs removed)
+  gridcells <- 2212 #number of grid cells in ROMS (NAs removed)
   output <- as.data.frame(matrix(NA, nrow=(gridcells*121), ncol=10))  #21912 non-NA grid cells in ROMS
-  colnames(output) <- c("lon","lat","year","pres","suitability","sst","chla_surface", "z","zoo_200", "sampled")
+  colnames(output) <- c("lon","lat","year","pres","suitability","sst","chla_surface", "z","zoo_50", "sampled")
   
   #---Load in population simulation ----
   #A MICE model for Anchovy biomass in the CCS. 50 simulations, 2000 years each
@@ -31,14 +31,15 @@ SimulateWorld_ROMS_Anchovy <- function(dir){
   pop$year <- pop$Year - 1879
   error <- sd(pop$AnchovySSB) #pretty large
   pop <- pop[pop$Sim==1,]
-  pop$AnchovySSB_norm <- BBmisc::normalize(pop$AnchovySSB,method = "range",range=c(1,2)) #use this range to vary prevalence according to popn. dynamics
+  pop$AnchovySSB_norm <- BBmisc::normalize(pop$AnchovySSB,method = "range",range=c(0.9,1)) #use this range to vary prevalence according to popn. dynamics
   # plot(pop$Year,pop$AnchovySSB, type='l')
   
   #----Load in rasters----
   #These are the average spring conditions from the downscaled Hadley earth system model
   files_sst <- list.files(paste0(dir,'sst_monthly'), full.names = TRUE, pattern=".grd") 
   files_chl <- list.files(paste0(dir,'chl_surface'), full.names = TRUE, pattern=".grd") 
-  files_zoo200 <- list.files(paste0(dir,'zoo_200m'), full.names = TRUE, pattern=".grd") 
+  # files_zoo200 <- list.files(paste0(dir,'zoo_200m'), full.names = TRUE, pattern=".grd")
+  files_zoo50 <- list.files(paste0(dir,'zoo_50m'), full.names = TRUE, pattern=".grd") 
   years <- seq(1980,2100,1)
   
   #----Loop through each year----
@@ -49,18 +50,19 @@ SimulateWorld_ROMS_Anchovy <- function(dir){
     sst <- raster(files_sst[y])
     chla <- raster(files_chl[y])
     chla <- log(chla)
-    zoo <- raster(files_zoo200[y])
+    # zoo <- raster(files_zoo200[y])
+    zoo <- raster(files_zoo50[y])
     z <- raster('~/Dropbox/WRAP Location^3/Rasters_2d_Spring/gfdl/bottom_layer_depth.grd')
     z <- z * -1
     
     
     #----create a mask of a smaller domain-----
     #This is to force OM to operate within a domain appropriate to anchovy
-    scb_coords=matrix(c(-128,48,
+    scb_coords=matrix(c(-125,48,
                         -115,48,
                         -115,30,
-                        -121,30,
-                        -128,40),ncol=2,byrow = T)
+                        -118,30,
+                        -125,40),ncol=2,byrow = T)
     p=Polygon(scb_coords)
     ps=Polygons(list(p),1)
     sps = SpatialPolygons(list(ps))
@@ -72,18 +74,21 @@ SimulateWorld_ROMS_Anchovy <- function(dir){
     extent(r) <- extent(z)
     rt <- rasterize(test,r)
     # plot(rt,xlim=c(-134,-115),ylim=c(30,48),col="light blue")
+    # map('worldHires',add=T)
     
     sst <- mask(sst,rt)
     chla <- mask(chla,rt)
     zoo <- mask(zoo,rt)
     z <- mask(z,rt)
-
+    # plot(z)
+    # contour(z,add=T,levels=c(-1000))
+    # # z[] <- BBmisc::normalize(z@data@values, method = "range", range = c(0, 1))
     #Optional: plot environmental layers
     # plot(sst, main= 'SST')
     # plot(chla, main = 'Surface Chl-a')
     # plot(z, main = 'Bathymetry')
     # plot(zoo)
-    
+    # 
     #----assign response curves----
     #Stack rasters
     spA_stack <- stack(sst, zoo, z)
@@ -92,8 +97,10 @@ SimulateWorld_ROMS_Anchovy <- function(dir){
     #Assign preferences
     spA_parameters <- formatFunctions(sst = c(fun="dnorm",mean=15,sd=7),
                                       # chla = c(fun="dnorm",mean=0.5,sd=1.5),
-                                      zoo = c(fun="logisticFun",alpha=-10,beta=45),
-                                      z = c(fun="logisticFun",alpha=-250,beta=-2000))
+                                      zoo = c(fun="logisticFun",alpha=-5,beta=20),
+                                      z = c(fun="logisticFun",alpha=-500,beta=-2000))
+                                      # z = c(fun="logisticFun",alpha=-0.8,beta=-0.005))
+                                      # z = c(fun="logisticFun",alpha=-250,beta=-2000))
     spA_suitability <- generateSpFromFun(spA_stack,parameters=spA_parameters, rescale = FALSE,rescale.each.response = FALSE) #Important: make sure rescaling is false. Doesn't work well in the 'for' loop.
     # plot(spA_suitability$suitab.raster) #plot habitat suitability
     # virtualspecies::plotResponse(spA_suitability) #plot response curves
@@ -102,11 +109,11 @@ SimulateWorld_ROMS_Anchovy <- function(dir){
     ref_max_sst <- dnorm(spA_parameters$sst$args[1], mean=spA_parameters$sst$args[1], sd=spA_parameters$sst$args[2]) #JS/BM: potential maximum suitability based on optimum temperature
     ref_max_zoo <- 1 / (1 + exp(((zoo@data@max) - spA_parameters$zoo$args[2])/spA_parameters$zoo$args[1]))
     ref_max_z <- 1 / (1 + exp(((z@data@max) - spA_parameters$z$args[2])/spA_parameters$z$args[1]))
-    ref_max <- ref_max_sst * ref_max_zoo #* ref_max_z
+    ref_max <- ref_max_sst * ref_max_zoo * ref_max_z
     spA_suitability$suitab.raster <- (1/ref_max)*spA_suitability$suitab.raster #JS/BM: rescaling suitability, so the max suitbaility is only when optimum is encountered
     # print(spA_suitability$suitab.raster)
     # plot(spA_suitability$suitab.raster) #plot habitat suitability
-    
+
     #----Convert suitability to Presence-Absence----
     #Use a specific function to convert suitability (0-1) to presence or absence (1 or 0)
     # prev <- pop$AnchovySSB[pop$year==y]
@@ -118,18 +125,18 @@ SimulateWorld_ROMS_Anchovy <- function(dir){
     # plot(suitability_PA$pa.raster)
     
     #-----Sample Presences and generate Biomass-----
-    set.seed(y)
-    find_prevalence <- sampleOccurrences(suitability_PA,n = 500,type = "presence-absence",
-                                         detection.probability = 1,error.probability=0, plot = FALSE)
-    suit_prev <- as.numeric(find_prevalence$sample.prevalence[1])
-    pop_prev <- pop$AnchovySSB_norm[pop$year==y]
-    sp_prev <- pop_prev * suit_prev
+    # set.seed(y)
+    # find_prevalence <- sampleOccurrences(suitability_PA,n = 500,type = "presence-absence",
+    #                                      detection.probability = 1,error.probability=0, plot = FALSE)
+    # suit_prev <- as.numeric(find_prevalence$sample.prevalence[1])
+    # pop_prev <- pop$AnchovySSB_norm[pop$year==y]
+    # sp_prev <- pop_prev * suit_prev
     
     set.seed(y)
     presence.points <- sampleOccurrences(suitability_PA,n = 500,type = "presence-absence",
-                         detection.probability = 1,error.probability=0, plot = FALSE,
+                         detection.probability = 1,error.probability=0, plot = FALSE)
                                          # sampling.area = test)
-                                         sample.prevalence = round(sp_prev,1))
+                                         # sample.prevalence = round(sp_prev,1))
                                          # sample.prevalence = round(prev[y],1))
     # sample.prevalence = round(sp_prev,1))
     # sample.prevalence = round(prev[y],1))
@@ -149,17 +156,24 @@ SimulateWorld_ROMS_Anchovy <- function(dir){
     output$suitability[se:ei] <- rasterToPoints(suitability_PA$suitab.raster)[,3] 
     output$sst[se:ei] <-  rasterToPoints(sst)[,3]
     output$chla_surface[se:ei] <-  rasterToPoints(chla)[,3]
-    output$zoo_200[se:ei] <- rasterToPoints(zoo)[,3]
+    output$zoo_50[se:ei] <- rasterToPoints(zoo)[,3]
     output$z[se:ei] <-  rasterToPoints(z)[,3]
     #temp file
     temp_sampled <- left_join(output[se:ei,1:9], df, by=c('lon','lat'))
     #write to output
     output$sampled[se:ei] <- temp_sampled$sampled
+    output$pop_norm[se:ei] <-  pop$AnchovySSB_norm[pop$year==y]
   }
   
-  a_mean <- mean(pop$AnchovySSB) / 120
-  a_sd <- (sd(pop$AnchovySSB) / 120) / 3 
-  output$abundance <- ifelse(output$pres==1,rnorm(nrow(output),a_mean, a_sd)*output$suitability,0)
+  a_mean <- log((mean(pop$AnchovySSB) / gridcells )*2) #divide by number of grid cells, but multiply by 1.7 to offset multiplying by suitablity & pop below
+  a_sd <- log((sd(pop$AnchovySSB) / gridcells) / 400) 
+  # hist(rlnorm(gridcells,a_mean,a_sd))
+  # sum(rlnorm(gridcells,a_mean,a_sd))
+  # sum(rlnorm(nsamples,a_mean,a_sd))
+  
+  # output$abundance <- ifelse(output$pres==1,rlnorm(nrow(output),a_mean, a_sd)*output$suitability,0)
+  output$abundance <- ifelse(output$pres==1,rlnorm(nrow(output),a_mean, a_sd)*output$suitability*output$pop_norm,0)
+  # sum(output$abundance, na.rm=T)
   #Convert NAs in 'sampled' columns to zeros
   output$sampled <- ifelse(is.na(output$sampled),0, output$sampled)
   

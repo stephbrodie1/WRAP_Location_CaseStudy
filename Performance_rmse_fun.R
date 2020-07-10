@@ -37,7 +37,6 @@ sdm_rmse <- function(dat_hist, dat_fcast) {
   names(rmse_abund_allh_y) <- c("year", mods)
   rmse_abund_allh_y$year <- unique(dat_hist$year)
 
-  
   # Calculate RMSE, and plot total abundance trajectories
   
   #Hist
@@ -52,7 +51,7 @@ sdm_rmse <- function(dat_hist, dat_fcast) {
     ann_mod <- aggregate(formula(paste(m,"~ year")), dat=dat_hist, FUN="sum")
     rmse_abund_annual$rmse_hist[rmse_abund_all$model==m] <- RMSE(ann_obs$abundance, ann_mod[,m])
     
-    plot(ann_obs, type="l", lwd=2, ylim=c(), xlab="",
+    plot(ann_obs, type="l", lwd=2, ylim=ylim, xlab="",
          main=paste0("Hist, ", m, ", rmse=",round(RMSE(dat_hist$abundance, dat_hist[,m]),2),
                      ", cor=", round(cor(dat_hist$abundance, dat_hist[,m]),2)))
     lines(ann_mod, lwd=2, col="red")
@@ -71,7 +70,7 @@ sdm_rmse <- function(dat_hist, dat_fcast) {
     ann_mod <- aggregate(formula(paste(m,"~ year")), dat=dat_fcast, FUN="sum")
     rmse_abund_annual$rmse_fcast[rmse_abund_all$model==m] <- RMSE(ann_obs$abundance, ann_mod[,m])
     
-    plot(ann_obs, type="l", lwd=2, ylim=c(), xlab="",
+    plot(ann_obs, type="l", lwd=2, ylim=ylim, xlab="",
          main=paste0("Fcast, ", m, ", rmse=",round(RMSE(dat_fcast$abundance, dat_fcast[,m]),2),
                      ", cor=", round(cor(dat_fcast$abundance, dat_fcast[,m]),2)))
     lines(ann_mod, lwd=2, col="red")

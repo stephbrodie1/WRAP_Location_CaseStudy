@@ -4,7 +4,6 @@
 
 ## Code by Lewis Barnett and James Smith
 
-#Note: abundance models are normally distributed, not lognormally. SB has corrected instances but may have missed some (sdmTMB won't install to check)
 
   #'dat' are all the observations from the OM
   #'year_fcast' is the year used to split historical (fitting) and forecast (testing) data
@@ -46,7 +45,7 @@
   
   tw_formula <- formula(paste("abundance ~ 0 +", env_formula))
   delta1_formula <- formula(paste("pres ~ 0 +", env_formula))
-  delta2_formula <- formula(paste("abundance ~ 0 +", env_formula_deltaN))  #JS: I find logging abundance leads to fewer fitting issues
+  delta2_formula <- formula(paste("log_abundance ~ 0 +", env_formula_deltaN))  #JS: I find logging abundance leads to fewer fitting issues
 
   
   if ("E" %in% covs) {  #Enviro only; no spatiotemporal random fields (but simple space?)
@@ -107,7 +106,7 @@
       P_glm_E_P <- predict(glm_E_P)  #binomial part, link scale
       P_glm_E_P$est_prob <- exp(P_glm_E_P$est)/(1 + exp(P_glm_E_P$est))  #as probabilities
       P_glm_E_N <- predict(glm_E_N, newdata = dat, xy_cols = c("lon", "lat"))  #abundance part
-      P_glm_E_P$est_delta <- P_glm_E_P$est_prob * P_glm_E_N$est  #'exp' here if using log_abundance as response
+      P_glm_E_P$est_delta <- P_glm_E_P$est_prob * exp(P_glm_E_N$est)  #'exp' here if using log_abundance as response
       dat_hist$glm_E <- P_glm_E_P$est_delta[P_glm_E_P$year <= year_fcast]
       dat_fcast$glm_E <- P_glm_E_P$est_delta[P_glm_E_P$year > year_fcast]
     }
@@ -157,7 +156,7 @@
       start <- Sys.time()
       print("glm_Sr_N")
       glm_Sr_N <- try(sdmTMB(  #non-zero abundance part
-        formula = abundance ~ 0,
+        formula = log_abundance ~ 0,
         time_varying = NULL,
         spde = spde_pos,
         time = "year",
@@ -175,7 +174,7 @@
       P_glm_Sr_P <- predict(glm_Sr_P)  #binomial part, link scale
       P_glm_Sr_P$est_prob <- exp(P_glm_Sr_P$est)/(1 + exp(P_glm_Sr_P$est))  #as probabilities
       P_glm_Sr_N <- predict(glm_Sr_N, newdata = dat, xy_cols = c("lon", "lat"))  #abundance part
-      P_glm_Sr_P$est_delta <- P_glm_Sr_P$est_prob * P_glm_Sr_N$est  #'exp' here if using log_abundance as response
+      P_glm_Sr_P$est_delta <- P_glm_Sr_P$est_prob * exp(P_glm_Sr_N$est)  #'exp' here if using log_abundance as response
       dat_hist$glm_Sr <- P_glm_Sr_P$est_delta[P_glm_Sr_P$year <= year_fcast]
       dat_fcast$glm_Sr <- P_glm_Sr_P$est_delta[P_glm_Sr_P$year > year_fcast]
     }
@@ -236,7 +235,7 @@
       P_glm_ESt_P <- predict(glm_ESt_P)  #binomial part, link scale
       P_glm_ESt_P$est_prob <- exp(P_glm_ESt_P$est)/(1 + exp(P_glm_ESt_P$est))  #as probabilities
       P_glm_ESt_N <- predict(glm_ESt_N, newdata = dat, xy_cols = c("lon", "lat"))  #abundance part
-      P_glm_ESt_P$est_delta <- P_glm_ESt_P$est_prob * P_glm_ESt_N$est  #'exp' here if using log_abundance as response
+      P_glm_ESt_P$est_delta <- P_glm_ESt_P$est_prob * exp(P_glm_ESt_N$est)  #'exp' here if using log_abundance as response
       dat_hist$glm_ESt <- P_glm_ESt_P$est_delta[P_glm_ESt_P$year <= year_fcast]
       dat_fcast$glm_ESt <- P_glm_ESt_P$est_delta[P_glm_ESt_P$year > year_fcast]
     }
@@ -299,7 +298,7 @@
       P_glm_ESr_P <- predict(glm_ESr_P)  #binomial part, link scale
       P_glm_ESr_P$est_prob <- exp(P_glm_ESr_P$est)/(1 + exp(P_glm_ESr_P$est))  #as probabilities
       P_glm_ESr_N <- predict(glm_ESr_N, newdata = dat, xy_cols = c("lon", "lat"))  #abundance part
-      P_glm_ESr_P$est_delta <- P_glm_ESr_P$est_prob * P_glm_ESr_N$est  #'exp' here if using log_abundance as response
+      P_glm_ESr_P$est_delta <- P_glm_ESr_P$est_prob * exp(P_glm_ESr_N$est)  #'exp' here if using log_abundance as response
       dat_hist$glm_ESr <- P_glm_ESr_P$est_delta[P_glm_ESr_P$year <= year_fcast]
       dat_fcast$glm_ESr <- P_glm_ESr_P$est_delta[P_glm_ESr_P$year > year_fcast]
     }

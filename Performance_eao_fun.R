@@ -92,6 +92,7 @@ sdm_eao <- function(dat_hist, dat_fcast) {
     diffx <- eao_fcast_y$observed - eao_fcast_y[,m]
     plot(eao_fcast_y$year, diffx, type="l", lwd=2, col="red", xlab="", ylab="obs-pred EAO",
          main=paste(m), ylim=c(min(diffx), max(diffx)))
+    abline(h=0, lty=2, col="blue")
     
   }
   

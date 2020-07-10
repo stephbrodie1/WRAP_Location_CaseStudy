@@ -25,7 +25,7 @@ library(tidync)
 files_long <- list.files('2d_fields/monthly/', full.names = TRUE)
 files_short <- list.files('2d_fields/monthly', full.names = FALSE)
 
-for (f in c(2:33)){ #skipping bottom layer depth as it is a unique (and static)
+for (f in c(34:34)){ #skipping bottom layer depth as it is a unique (and static)
   print(files_long[f])
   nc <- nc_open(files_long[f])
   
@@ -76,12 +76,12 @@ for (f in c(2:33)){ #skipping bottom layer depth as it is a unique (and static)
 #For each year and variable, load in monthly data from April-June and average. Output to a new folder. 
 
 variables <- c("chl_50m","chl_surface","depth_oxygen","ild_0.5C","oxygen_bottom","ssh_monthly","sst_monthly","temp_bottom","zoo_200m","zoo_50m")
-
+variables <- c("zoo_50m")
 for (variable in variables){
   print(variable)
   
   for (i in 1:121){
-    files <- list.files(paste0('~/Dropbox/WRAP Location^3/Rasters_2d_monthly/gfdl/',variable), pattern=".grd" , full.names = T)
+    files <- list.files(paste0('~/Dropbox/WRAP Location^3/Rasters_2d_monthly/ipsl/',variable), pattern=".grd" , full.names = T)
     month_idx <- rep(1:12,times=121)
     spring_months <- which(month_idx==4)
     
@@ -92,7 +92,7 @@ for (variable in variables){
     jun <- raster(files[start_indx+2])
     spring_r <- mean(apr,may,jun)
     years <- seq(1980,2100,1)
-    writeRaster(spring_r,paste0('~/Dropbox/WRAP Location^3/Rasters_2d_Spring/gfdl/',variable,'/',variable,'_gfdl_SpringMean_',years[i],'.grd'), overwrite=TRUE)
+    writeRaster(spring_r,paste0('~/Dropbox/WRAP Location^3/Rasters_2d_Spring/ipsl/',variable,'/',variable,'_ipsl_SpringMean_',years[i],'.grd'), overwrite=TRUE)
   }
 }
 

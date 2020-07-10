@@ -17,7 +17,7 @@
 
 
 delta1_formula <- formula(paste("pres ~", env_formula_MLP))
-delta2_formula <- formula(paste("abundance ~", env_formula_MLP))
+delta2_formula <- formula(paste("log_abundance ~", env_formula_MLP))
 
 if (type == "delta") {
   
@@ -25,76 +25,76 @@ if (type == "delta") {
     print("Fitting MLP-E")
     mlp_E_P <- neuralnet(delta1_formula, data = dat_hist, 
                          hidden = c(3), linear.output = F, algorithm = "rprop+", threshold = 0.2)
-    mlp_E_N <- neuralnet(delta2_formula, data = subset(dat_hist, !is.infinite(dat_hist$abundance)), 
+    mlp_E_N <- neuralnet(delta2_formula, data = subset(dat_hist, !is.infinite(dat_hist$log_abundance)), 
                          hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.2)
     
     presx <- as.numeric(predict(mlp_E_P,dat_hist))
     abundx <- as.numeric(predict(mlp_E_N,dat_hist))
-    dat_hist$mlp_E <- presx * abundx
+    dat_hist$mlp_E <- presx * exp(abundx)
     # par(mfrow=c(1,2))
     # plot(dat_hist$temp, presx, main="MLP-E-Pres", xlab="Temp")
     # plot(dat_hist$temp, abundx, main="MLP-E-Abund", xlab="Temp")
     
     presx <- as.numeric(predict(mlp_E_P,dat_fcast))
     abundx <- as.numeric(predict(mlp_E_N,dat_fcast))
-    dat_fcast$mlp_E <- presx * abundx
+    dat_fcast$mlp_E <- presx * exp(abundx)
   }
   
   if ("S" %in% covs) {
     print("Fitting MLP-S")
     mlp_S_P <- neuralnet(pres ~ lat_n + lon_n, data = dat_hist, 
                          hidden = c(3), linear.output = F, algorithm = "rprop+", threshold = 0.2)
-    mlp_S_N <- neuralnet(abundance ~ lat_n + lon_n, data = subset(dat_hist, !is.infinite(dat_hist$abundance)), 
+    mlp_S_N <- neuralnet(log_abundance ~ lat_n + lon_n, data = subset(dat_hist, !is.infinite(dat_hist$log_abundance)), 
                          hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.2)
     
     presx <- as.numeric(predict(mlp_S_P,dat_hist))
     abundx <- as.numeric(predict(mlp_S_N,dat_hist))
-    dat_hist$mlp_S <- presx * abundx
+    dat_hist$mlp_S <- presx * exp(abundx)
     # par(mfrow=c(1,2))
     # plot(dat_hist$temp, presx, main="MLP-S-Pres", xlab="Temp")
     # plot(dat_hist$temp, abundx, main="MLP-S-Abund", xlab="Temp")
     
     presx <- as.numeric(predict(mlp_S_P,dat_fcast))
     abundx <- as.numeric(predict(mlp_S_N,dat_fcast))
-    dat_fcast$mlp_S <- presx * abundx
+    dat_fcast$mlp_S <- presx * exp(abundx)
   }
   
   if ("ES" %in% covs) {
     print("Fitting MLP-ES")
     mlp_ES_P <- neuralnet(update(delta1_formula, ~. + lat_n + lon_n), data = dat_hist, 
                          hidden = c(3), linear.output = F, algorithm = "rprop+", threshold = 0.2)
-    mlp_ES_N <- neuralnet(update(delta2_formula, ~. + lat_n + lon_n), data = subset(dat_hist, !is.infinite(dat_hist$abundance)), 
+    mlp_ES_N <- neuralnet(update(delta2_formula, ~. + lat_n + lon_n), data = subset(dat_hist, !is.infinite(dat_hist$log_abundance)), 
                          hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.2)
     
     presx <- as.numeric(predict(mlp_ES_P,dat_hist))
     abundx <- as.numeric(predict(mlp_ES_N,dat_hist))
-    dat_hist$mlp_ES <- presx * abundx
+    dat_hist$mlp_ES <- presx * exp(abundx)
     # par(mfrow=c(1,2))
     # plot(dat_hist$temp, presx, main="MLP-ES-Pres", xlab="Temp")
     # plot(dat_hist$temp, abundx, main="MLP-ES-Abund", xlab="Temp")
     
     presx <- as.numeric(predict(mlp_ES_P,dat_fcast))
     abundx <- as.numeric(predict(mlp_ES_N,dat_fcast))
-    dat_fcast$mlp_ES <- presx * abundx
+    dat_fcast$mlp_ES <- presx * exp(abundx)
   }
   
   if ("EST" %in% covs) {
     print("Fitting MLP-EST")
     mlp_EST_P <- neuralnet(update(delta1_formula, ~. + lat_n + lon_n + year_n), data = dat_hist, 
                           hidden = c(3), linear.output = F, algorithm = "rprop+", threshold = 0.2)
-    mlp_EST_N <- neuralnet(update(delta2_formula, ~. + lat_n + lon_n + year_n), data = subset(dat_hist, !is.infinite(dat_hist$abundance)), 
+    mlp_EST_N <- neuralnet(update(delta2_formula, ~. + lat_n + lon_n + year_n), data = subset(dat_hist, !is.infinite(dat_hist$log_abundance)), 
                           hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.2)
     
     presx <- as.numeric(predict(mlp_EST_P, dat_hist))
     abundx <- as.numeric(predict(mlp_EST_N, dat_hist))
-    dat_hist$mlp_EST <- presx * abundx
+    dat_hist$mlp_EST <- presx * exp(abundx)
     # par(mfrow=c(1,2))
     # plot(dat_hist$temp, presx, main="MLP-EST-Pres", xlab="Temp")
     # plot(dat_hist$temp, abundx, main="MLP-EST-Abund", xlab="Temp")
     
     presx <- as.numeric(predict(mlp_EST_P,dat_fcast))
     abundx <- as.numeric(predict(mlp_EST_N,dat_fcast))
-    dat_fcast$mlp_EST <- presx * abundx
+    dat_fcast$mlp_EST <- presx * exp(abundx)
   }
   
   ## we can adapt the code below if we get fitting issues

@@ -17,7 +17,8 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   
   #----Create output file----
   nsamples <- 500  #number of samples to use in the estimation model
-  output <- as.data.frame(matrix(NA, nrow=(21912*121), ncol=10))  #21912 non-NA grid cells in ROMS
+  gridcells <- 21912
+  output <- as.data.frame(matrix(NA, nrow=(gridcells*121), ncol=10))  #21912 non-NA grid cells in ROMS
   colnames(output) <- c("lon","lat","year","pres","suitability","sst","zoo_200","chla_surface", "mld", "sample")
 
   #----Load in rasters----
@@ -30,7 +31,6 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   
   #----Loop through each year----
   for (y in 1:121){
-    set.seed(y)
     print(paste0("Creating environmental simulation for Year ",years[y]))
     
     #Load in environmental rasters for a specific year
@@ -56,7 +56,8 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     names(spA_stack) <- c('sst', 'zoo')
     
     #Assign preferences
-    spA_parameters <- formatFunctions(sst = c(fun="dnorm",mean=14,sd=4),
+
+    spA_parameters <- formatFunctions(sst = c(fun="dnorm",mean=14,sd=7),
                                       zoo = c(fun="logisticFun",alpha=-10,beta=45))
     spA_suitability <- generateSpFromFun(spA_stack,parameters=spA_parameters,
                                          rescale = FALSE,rescale.each.response = FALSE,
@@ -82,12 +83,13 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     #Assign preferences
     spB_parameters <- formatFunctions(sst = c(fun="dnorm",mean=17,sd=4),
                                       mld = c(fun="dnorm",mean=50,sd=30),
+                                      # spA = c(fun="dnorm",mean=0.5,sd=2))
                                       spA = c(fun="logisticFun",alpha=-0.15,beta=0.4))
-    spB_suitability <- generateSpFromFun(spB_stack,parameters=spB_parameters, 
+    spB_suitability <- generateSpFromFun(spB_stack,parameters=spB_parameters,
                                          rescale = FALSE,rescale.each.response = FALSE,
                                          species.type = "multiplicative")
-    plot(spB_suitability$suitab.raster) #plot habitat suitability
-    virtualspecies::plotResponse(spB_suitability) #plot response curves
+    # plot(spB_suitability$suitab.raster) #plot habitat suitability
+    # virtualspecies::plotResponse(spB_suitability) #plot response curves
 
     #manually rescale
     ref_max_sst <- dnorm(spB_parameters$sst$args[1], mean=spB_parameters$sst$args[1], sd=spB_parameters$sst$args[2]) #JS/BM: potential maximum suitability based on optimum temperature
@@ -108,7 +110,7 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     
     #-----Sample Presences and Absences-----
     presence.points <- sampleOccurrences(suitability_PA,n = nsamples,type = "presence-absence",
-                                         detection.probability = 1,error.probability=0, plot = TRUE,
+                                         detection.probability = 1,error.probability=0, plot = FALSE,
                                          sample.prevalence = NULL)
     #convert to dataframe
     pres_df <- cbind(as.data.frame(presence.points$sample.points$x),as.data.frame(presence.points$sample.points$y))
@@ -124,11 +126,11 @@ SimulateWorld_ROMS_Albacore <- function(dir){
     
     #----Extract data for each year----
     print("Extracting suitability")
-    ei <- 21912*y #end location in output grid to index to
-    se <- ei - (21912-1) #start location in output grid to index to
+    ei <- gridcells*y #end location in output grid to index to
+    se <- ei - (gridcells-1) #start location in output grid to index to
     output$lat[se:ei] <- rasterToPoints(sst)[,2] #using sst as an example raster 
     output$lon[se:ei] <- rasterToPoints(sst)[,1]
-    output$year[se:ei] <- rep(years[y],21912)
+    output$year[se:ei] <- rep(years[y],gridcells)
     output$pres[se:ei] <- rasterToPoints(suitability_PA$pa.raster)[,3] 
     output$suitability[se:ei] <- rasterToPoints(spB_suitability$suitab.raster)[,3]  #extract points from suitability file
     output$sst[se:ei] <-  rasterToPoints(sst)[,3]  #extract points from suitability file
@@ -140,10 +142,12 @@ SimulateWorld_ROMS_Albacore <- function(dir){
   }
   
   #Average monthly biomass available to CCS is: 1.18x10^5 ± (0.13x10^5 se) mt (from Desiree Tommasi)
-  mean_spatial <- round(118000/140, 1) 
-  se_spatial <- round((13000/140) ,2) 
-  output$abundance <- ifelse(output$pres==1,rnorm(nrow(output),mean_spatial, se_spatial)*output$suitability,0)
-
+  mean_spatial <- log((118000/gridcells)*5) #Kind of had to make these up to get biomass pop that matches 1.18, and with error low enough that the EM does ok. 
+  se_spatial <- log((13000)/10000) 
+  output$abundance <- ifelse(output$pres==1,rlnorm(nrow(output),mean_spatial, se_spatial)*output$suitability,0)
+  # hist(output$abundance)
+  # sum(output$abundance, na.rm=T)
+  # 
   print('Saving csv to working directory')
   # write.csv(output, 'Albacore_OM_Simulation.csv',row.names = FALSE)
   return(output)

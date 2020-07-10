@@ -94,14 +94,14 @@ sdm_cog <- function(dat_hist, dat_fcast) {
   for (m in mods) {
     plot(cog_lat_fcast_y$year, cog_lat_fcast_y[,m], type="l", lwd=2, col="red",
          ylab="obs-pred cog", xlab="", main=paste(m),
-         ylim=c(min(cog_lat_fcast_y[,m], na.rm=T),max(cog_lat_fcast_y[,m], na.rm=T)))
+         ylim=c(min(cog_lat_fcast_y[,m]),max(cog_lat_fcast_y[,m])))
     abline(h=0, lty=2, col="blue")
   }
 
   return(list(rmse_cog=rmse_cog,
-  cog_lat_hist=cog_lat_hist,
-  cog_lat_fcast=cog_lat_fcast,
-  cog_lat_fcast_y=cog_lat_fcast_y))
+              cog_lat_hist=cog_lat_hist,
+              cog_lat_fcast=cog_lat_fcast,
+              cog_lat_fcast_y=cog_lat_fcast_y))
 }
 
   
