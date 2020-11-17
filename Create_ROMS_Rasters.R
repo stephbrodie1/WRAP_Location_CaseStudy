@@ -25,7 +25,7 @@ library(tidync)
 files_long <- list.files('2d_fields/monthly/', full.names = TRUE)
 files_short <- list.files('2d_fields/monthly', full.names = FALSE)
 
-for (f in c(34:34)){ #skipping bottom layer depth as it is a unique (and static)
+for (f in c(4,7,10,13,16,19,22)){ #skipping bottom layer depth as it is a unique (and static) 
   print(files_long[f])
   nc <- nc_open(files_long[f])
   
@@ -37,7 +37,7 @@ for (f in c(34:34)){ #skipping bottom layer depth as it is a unique (and static)
   name <-  names(nc$var)[5]
   tmp.array <- ncvar_get(nc,name)
   
-  #Loop through every time step in ncdf
+  #Loop through every time step in ncdf. 
   for (i in 1:1452){
     r <- raster(t(tmp.array[,,i]),
                 xmn=min(lon), xmx=max(lon),
@@ -45,7 +45,7 @@ for (f in c(34:34)){ #skipping bottom layer depth as it is a unique (and static)
                 crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
     r <- flip(r,2)
     #Forcing resolution our ROMS template (a quick fix to resolve grid edge vs. mid point)
-    template = raster('~/Dropbox/Eco-ROMS/ROMS & Bathym Data/Bathymetry ETOPO1/template.grd')
+    template = raster('~/Dropbox/Eco-ROMS/ROMS & Bathym Data/Bathymetry ETOPO1/template.grd') 
     r <- raster::resample(r, template, method="bilinear")  
     # plot(r)
     
@@ -72,11 +72,11 @@ for (f in c(34:34)){ #skipping bottom layer depth as it is a unique (and static)
   nc_close(nc)
 }
 
+
 #----Create Spring Average Conditions----
 #For each year and variable, load in monthly data from April-June and average. Output to a new folder. 
-
-variables <- c("chl_50m","chl_surface","depth_oxygen","ild_0.5C","oxygen_bottom","ssh_monthly","sst_monthly","temp_bottom","zoo_200m","zoo_50m")
-variables <- c("zoo_50m")
+#Make sure to manually update GCM folder directory (because I'm lazy and didn't code it in)
+variables <- c("chl_surface","ild_0.5C","oxygen_bottom","sst_monthly","temp_bottom","zoo_200m","zoo_50m")
 for (variable in variables){
   print(variable)
   
