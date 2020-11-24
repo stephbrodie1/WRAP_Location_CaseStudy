@@ -39,9 +39,9 @@
   dat_pres <- dat[dat$pres == 1,]
   
   # make SPDE (stochastic partial differential equation that these INLA-based methods rely on)
-  spde <- try(make_spde(x = dat$lon, y = dat$lat, n_knots = 200), silent=TRUE) # increase knots to at least ~250 for WC data
-  spde_pos <- try(make_spde(x = dat_pres$lon, y = dat_pres$lat, n_knots = 200), silent=TRUE)
-  #plot_spde(spde) # can vary number of knots to modify the mesh until you get what you want
+  spde <- try(make_mesh(data = dat, xy_cols = c("lon","lat"), n_knots = 200), silent=TRUE) # increase knots to at least ~250 for WC data
+  spde_pos <- try(make_mesh(data = dat_pres, xy_cols = c("lon","lat"), n_knots = 200), silent=TRUE)
+  # plot(spde) # can vary number of knots to modify the mesh until you get what you want
   
   tw_formula <- formula(paste("abundance ~ 0 +", env_formula))
   delta1_formula <- formula(paste("pres ~ 0 +", env_formula))
@@ -105,7 +105,7 @@
       
       P_glm_E_P <- predict(glm_E_P)  #binomial part, link scale
       P_glm_E_P$est_prob <- exp(P_glm_E_P$est)/(1 + exp(P_glm_E_P$est))  #as probabilities
-      P_glm_E_N <- predict(glm_E_N, newdata = dat, xy_cols = c("lon", "lat"))  #abundance part
+      P_glm_E_N <- predict(glm_E_N, newdata = dat)  #abundance part
       P_glm_E_P$est_delta <- P_glm_E_P$est_prob * exp(P_glm_E_N$est)  #'exp' here if using log_abundance as response
       dat_hist$glm_E <- P_glm_E_P$est_delta[P_glm_E_P$year <= year_fcast]
       dat_fcast$glm_E <- P_glm_E_P$est_delta[P_glm_E_P$year > year_fcast]
@@ -116,7 +116,7 @@
     print("Fitting GLM-Sr")
     if (type == "tweedie") {
       glm_Sr <- try(sdmTMB(  #'glmm1' in original script
-        formula = abundance ~ 0,
+        formula = abundance ~ 1,
         time_varying = NULL,
         spde = spde,
         time = "year",
@@ -138,7 +138,7 @@
       start <- Sys.time()
       print("glm_Sr_P")
       glm_Sr_P <- try(sdmTMB(  #presence-absence part
-        formula = pres ~ 0,
+        formula = pres ~ 1,
         time_varying = NULL,
         spde = spde,
         time = "year",
@@ -156,7 +156,7 @@
       start <- Sys.time()
       print("glm_Sr_N")
       glm_Sr_N <- try(sdmTMB(  #non-zero abundance part
-        formula = log_abundance ~ 0,
+        formula = log_abundance ~ 1,
         time_varying = NULL,
         spde = spde_pos,
         time = "year",
@@ -173,7 +173,7 @@
 
       P_glm_Sr_P <- predict(glm_Sr_P)  #binomial part, link scale
       P_glm_Sr_P$est_prob <- exp(P_glm_Sr_P$est)/(1 + exp(P_glm_Sr_P$est))  #as probabilities
-      P_glm_Sr_N <- predict(glm_Sr_N, newdata = dat, xy_cols = c("lon", "lat"))  #abundance part
+      P_glm_Sr_N <- predict(glm_Sr_N, newdata = dat)  #abundance part
       P_glm_Sr_P$est_delta <- P_glm_Sr_P$est_prob * exp(P_glm_Sr_N$est)  #'exp' here if using log_abundance as response
       dat_hist$glm_Sr <- P_glm_Sr_P$est_delta[P_glm_Sr_P$year <= year_fcast]
       dat_fcast$glm_Sr <- P_glm_Sr_P$est_delta[P_glm_Sr_P$year > year_fcast]
@@ -234,7 +234,7 @@
 
       P_glm_ESt_P <- predict(glm_ESt_P)  #binomial part, link scale
       P_glm_ESt_P$est_prob <- exp(P_glm_ESt_P$est)/(1 + exp(P_glm_ESt_P$est))  #as probabilities
-      P_glm_ESt_N <- predict(glm_ESt_N, newdata = dat, xy_cols = c("lon", "lat"))  #abundance part
+      P_glm_ESt_N <- predict(glm_ESt_N, newdata = dat)  #abundance part
       P_glm_ESt_P$est_delta <- P_glm_ESt_P$est_prob * exp(P_glm_ESt_N$est)  #'exp' here if using log_abundance as response
       dat_hist$glm_ESt <- P_glm_ESt_P$est_delta[P_glm_ESt_P$year <= year_fcast]
       dat_fcast$glm_ESt <- P_glm_ESt_P$est_delta[P_glm_ESt_P$year > year_fcast]
@@ -297,7 +297,7 @@
 
       P_glm_ESr_P <- predict(glm_ESr_P)  #binomial part, link scale
       P_glm_ESr_P$est_prob <- exp(P_glm_ESr_P$est)/(1 + exp(P_glm_ESr_P$est))  #as probabilities
-      P_glm_ESr_N <- predict(glm_ESr_N, newdata = dat, xy_cols = c("lon", "lat"))  #abundance part
+      P_glm_ESr_N <- predict(glm_ESr_N, newdata = dat)  #abundance part
       P_glm_ESr_P$est_delta <- P_glm_ESr_P$est_prob * exp(P_glm_ESr_N$est)  #'exp' here if using log_abundance as response
       dat_hist$glm_ESr <- P_glm_ESr_P$est_delta[P_glm_ESr_P$year <= year_fcast]
       dat_fcast$glm_ESr <- P_glm_ESr_P$est_delta[P_glm_ESr_P$year > year_fcast]

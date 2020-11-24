@@ -108,90 +108,90 @@ if (type == "delta") {
   
   
   ## Plots - similar to partial effects
-  newdat_temp <- data.frame(temp_raw=dat$temp, temp_n=dat$temp_n,
-                            chla_n=median(dat$chla_n),
-                            mld_n=median(dat$mld_n),
-                            lat_n=median(dat$lat_n),
-                            lon_n=median(dat$lon_n),
-                            year_n=median(dat$year_n))
-  newdat_temp <- newdat_temp[order(newdat_temp$temp_n),]
+  # newdat_temp <- data.frame(temp_raw=dat$temp, temp_n=dat$temp_n,
+  #                           chla_n=median(dat$chla_n),
+  #                           mld_n=median(dat$mld_n),
+  #                           lat_n=median(dat$lat_n),
+  #                           lon_n=median(dat$lon_n),
+  #                           year_n=median(dat$year_n))
+  # newdat_temp <- newdat_temp[order(newdat_temp$temp_n),]
 
   #pres-abs; temp
-  presT1 <- predict(mlp_E_P, newdata=newdat_temp)
-  #presT2 <- predict(mlp_S_P, newdata=newdat_temp)
-  presT3 <- predict(mlp_ES_P, newdata=newdat_temp)
-  presT4 <- predict(mlp_EST_P, newdata=newdat_temp)
-  par(mfrow=c(2,2))
-  plot(newdat_temp$temp_raw, presT1, main="mlp-E, Pres-Abs", xlab="Temp", type="l")
-  plot(newdat_temp$temp_raw, presT3, main="mlp-ES, Pres-Abs", xlab="Temp", type="l")
-  plot(newdat_temp$temp_raw, presT4, main="mlp-EST, Pres-Abs", xlab="Temp", type="l")
-  
-  #abundance; temp
-  abundT1 <- predict(mlp_E_N, newdata=newdat_temp)
-  #abundT2 <- predict(mlp_S_N, newdata=newdat_temp)
-  abundT3 <- predict(mlp_ES_N, newdata=newdat_temp)
-  abundT4 <- predict(mlp_EST_N, newdata=newdat_temp)
-  par(mfrow=c(2,2))
-  plot(newdat_temp$temp_raw, abundT1, main="mlp-E, Abund", xlab="Temp", type="l")
-  plot(newdat_temp$temp_raw, abundT3, main="mlp-ES, Abund", xlab="Temp", type="l")
-  plot(newdat_temp$temp_raw, abundT4, main="mlp-EST, Abund", xlab="Temp", type="l")
-  
-  
-  newdat_chla <- data.frame(chla_raw=dat$chla, chla_n=dat$chla_n,
-                            temp_n=median(dat$temp_n),
-                            mld_n=median(dat$mld_n),
-                            lat_n=median(dat$lat_n),
-                            lon_n=median(dat$lon_n),
-                            year_n=median(dat$year_n))
-  newdat_chla <- newdat_chla[order(newdat_chla$chla_n),]
-  
-  #pres-abs; chl
-  presC1 <- predict(mlp_E_P, newdata=newdat_chla)
-  #presC2 <- predict(mlp_S_P, newdata=newdat_chla)
-  presC3 <- predict(mlp_ES_P, newdata=newdat_chla)
-  presC4 <- predict(mlp_EST_P, newdata=newdat_chla)
-  par(mfrow=c(2,2))
-  plot(newdat_chla$chla_raw, presC1, main="mlp-E, Pres-Abs", xlab="Chla", type="l")
-  plot(newdat_chla$chla_raw, presC3, main="mlp-ES, Pres-Abs", xlab="Chla", type="l")
-  plot(newdat_chla$chla_raw, presC4, main="mlp-EST, Pres-Abs", xlab="Chla", type="l")
-  
-  #abund; chl
-  abundC1 <- predict(mlp_E_N, newdata=newdat_chla)
-  #abundC2 <- predict(mlp_S_N, newdata=newdat_chla)
-  abundC3 <- predict(mlp_ES_N, newdata=newdat_chla)
-  abundC4 <- predict(mlp_EST_N, newdata=newdat_chla)
-  par(mfrow=c(2,2))
-  plot(newdat_chla$chla_raw, abundC1, main="mlp-E, Abund", xlab="Chla", type="l")
-  plot(newdat_chla$chla_raw, abundC3, main="mlp-ES, Abund", xlab="Chla", type="l")
-  plot(newdat_chla$chla_raw, abundC4, main="mlp-EST, Abund", xlab="Chla", type="l")
-  
-  newdat_mld <- data.frame(mld_raw=dat$mld, mld_n=dat$mld_n,
-                            temp_n=median(dat$temp_n),
-                            chla_n=median(dat$chla_n),
-                            lat_n=median(dat$lat_n),
-                            lon_n=median(dat$lon_n),
-                            year_n=median(dat$year_n))
-  newdat_mld <- newdat_mld[order(newdat_mld$mld_n),]
-  
-  #pres-abs; mld
-  presM1 <- predict(mlp_E_P, newdata=newdat_mld)
-  #presM2 <- predict(mlp_S_P, newdata=newdat_mld)
-  presM3 <- predict(mlp_ES_P, newdata=newdat_mld)
-  presM4 <- predict(mlp_EST_P, newdata=newdat_mld)
-  par(mfrow=c(2,2))
-  plot(newdat_mld$mld_raw, presM1, main="mlp-E, Pres-Abs", xlab="mld", type="l")
-  plot(newdat_mld$mld_raw, presM3, main="mlp-ES, Pres-Abs", xlab="mld", type="l")
-  plot(newdat_mld$mld_raw, presM4, main="mlp-EST, Pres-Abs", xlab="mld", type="l")
-  
-  #abund; mld
-  abundM1 <- predict(mlp_E_N, newdata=newdat_mld)
-  #abundM2 <- predict(mlp_S_N, newdata=newdat_mld)
-  abundM3 <- predict(mlp_ES_N, newdata=newdat_mld)
-  abundM4 <- predict(mlp_EST_N, newdata=newdat_mld)
-  par(mfrow=c(2,2))
-  plot(newdat_mld$mld_raw, abundM1, main="mlp-E, Abund", xlab="mld", type="l")
-  plot(newdat_mld$mld_raw, abundM3, main="mlp-ES, Abund", xlab="mld", type="l")
-  plot(newdat_mld$mld_raw, abundM4, main="mlp-EST, Abund", xlab="mld", type="l")
+  # presT1 <- predict(mlp_E_P, newdata=newdat_temp)
+  # #presT2 <- predict(mlp_S_P, newdata=newdat_temp)
+  # presT3 <- predict(mlp_ES_P, newdata=newdat_temp)
+  # presT4 <- predict(mlp_EST_P, newdata=newdat_temp)
+  # par(mfrow=c(2,2))
+  # plot(newdat_temp$temp_raw, presT1, main="mlp-E, Pres-Abs", xlab="Temp", type="l")
+  # plot(newdat_temp$temp_raw, presT3, main="mlp-ES, Pres-Abs", xlab="Temp", type="l")
+  # plot(newdat_temp$temp_raw, presT4, main="mlp-EST, Pres-Abs", xlab="Temp", type="l")
+  # 
+  # #abundance; temp
+  # abundT1 <- predict(mlp_E_N, newdata=newdat_temp)
+  # #abundT2 <- predict(mlp_S_N, newdata=newdat_temp)
+  # abundT3 <- predict(mlp_ES_N, newdata=newdat_temp)
+  # abundT4 <- predict(mlp_EST_N, newdata=newdat_temp)
+  # par(mfrow=c(2,2))
+  # plot(newdat_temp$temp_raw, abundT1, main="mlp-E, Abund", xlab="Temp", type="l")
+  # plot(newdat_temp$temp_raw, abundT3, main="mlp-ES, Abund", xlab="Temp", type="l")
+  # plot(newdat_temp$temp_raw, abundT4, main="mlp-EST, Abund", xlab="Temp", type="l")
+  # 
+  # 
+  # newdat_chla <- data.frame(chla_raw=dat$chla, chla_n=dat$chla_n,
+  #                           temp_n=median(dat$temp_n),
+  #                           mld_n=median(dat$mld_n),
+  #                           lat_n=median(dat$lat_n),
+  #                           lon_n=median(dat$lon_n),
+  #                           year_n=median(dat$year_n))
+  # newdat_chla <- newdat_chla[order(newdat_chla$chla_n),]
+  # 
+  # #pres-abs; chl
+  # presC1 <- predict(mlp_E_P, newdata=newdat_chla)
+  # #presC2 <- predict(mlp_S_P, newdata=newdat_chla)
+  # presC3 <- predict(mlp_ES_P, newdata=newdat_chla)
+  # presC4 <- predict(mlp_EST_P, newdata=newdat_chla)
+  # par(mfrow=c(2,2))
+  # plot(newdat_chla$chla_raw, presC1, main="mlp-E, Pres-Abs", xlab="Chla", type="l")
+  # plot(newdat_chla$chla_raw, presC3, main="mlp-ES, Pres-Abs", xlab="Chla", type="l")
+  # plot(newdat_chla$chla_raw, presC4, main="mlp-EST, Pres-Abs", xlab="Chla", type="l")
+  # 
+  # #abund; chl
+  # abundC1 <- predict(mlp_E_N, newdata=newdat_chla)
+  # #abundC2 <- predict(mlp_S_N, newdata=newdat_chla)
+  # abundC3 <- predict(mlp_ES_N, newdata=newdat_chla)
+  # abundC4 <- predict(mlp_EST_N, newdata=newdat_chla)
+  # par(mfrow=c(2,2))
+  # plot(newdat_chla$chla_raw, abundC1, main="mlp-E, Abund", xlab="Chla", type="l")
+  # plot(newdat_chla$chla_raw, abundC3, main="mlp-ES, Abund", xlab="Chla", type="l")
+  # plot(newdat_chla$chla_raw, abundC4, main="mlp-EST, Abund", xlab="Chla", type="l")
+  # 
+  # newdat_mld <- data.frame(mld_raw=dat$mld, mld_n=dat$mld_n,
+  #                           temp_n=median(dat$temp_n),
+  #                           chla_n=median(dat$chla_n),
+  #                           lat_n=median(dat$lat_n),
+  #                           lon_n=median(dat$lon_n),
+  #                           year_n=median(dat$year_n))
+  # newdat_mld <- newdat_mld[order(newdat_mld$mld_n),]
+  # 
+  # #pres-abs; mld
+  # presM1 <- predict(mlp_E_P, newdata=newdat_mld)
+  # #presM2 <- predict(mlp_S_P, newdata=newdat_mld)
+  # presM3 <- predict(mlp_ES_P, newdata=newdat_mld)
+  # presM4 <- predict(mlp_EST_P, newdata=newdat_mld)
+  # par(mfrow=c(2,2))
+  # plot(newdat_mld$mld_raw, presM1, main="mlp-E, Pres-Abs", xlab="mld", type="l")
+  # plot(newdat_mld$mld_raw, presM3, main="mlp-ES, Pres-Abs", xlab="mld", type="l")
+  # plot(newdat_mld$mld_raw, presM4, main="mlp-EST, Pres-Abs", xlab="mld", type="l")
+  # 
+  # #abund; mld
+  # abundM1 <- predict(mlp_E_N, newdata=newdat_mld)
+  # #abundM2 <- predict(mlp_S_N, newdata=newdat_mld)
+  # abundM3 <- predict(mlp_ES_N, newdata=newdat_mld)
+  # abundM4 <- predict(mlp_EST_N, newdata=newdat_mld)
+  # par(mfrow=c(2,2))
+  # plot(newdat_mld$mld_raw, abundM1, main="mlp-E, Abund", xlab="mld", type="l")
+  # plot(newdat_mld$mld_raw, abundM3, main="mlp-ES, Abund", xlab="mld", type="l")
+  # plot(newdat_mld$mld_raw, abundM4, main="mlp-EST, Abund", xlab="mld", type="l")
 
 }
 
