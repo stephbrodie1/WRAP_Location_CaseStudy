@@ -25,7 +25,7 @@ library(tidync)
 files_long <- list.files('2d_fields/monthly/', full.names = TRUE)
 files_short <- list.files('2d_fields/monthly', full.names = FALSE)
 
-for (f in c(4,7,10,13,16,19,22)){ #skipping bottom layer depth as it is a unique (and static) 
+for (f in c(2:22)){ #skipping bottom layer depth as it is a unique (and static) 
   print(files_long[f])
   nc <- nc_open(files_long[f])
   
@@ -83,7 +83,7 @@ for (variable in variables){
   for (i in 1:121){
     files <- list.files(paste0('~/Dropbox/WRAP Location^3/Rasters_2d_monthly/ipsl/',variable), pattern=".grd" , full.names = T)
     month_idx <- rep(1:12,times=121)
-    spring_months <- which(month_idx==4)
+    spring_months <- which(month_idx==4,5,6)
     
     start_indx <- spring_months[i]
     
