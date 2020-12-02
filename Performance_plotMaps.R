@@ -102,7 +102,8 @@ performance_plotMaps_function <- function(om = om){
     r_pred <- rasterFromXYZ(dat_x[,c("lon","lat","pred_x")])
     plot(r_pred, asp=1, main=paste0("Predicted, gam_EST, year ", year_x))
     
-    if (length(ls(pattern = "gam_ECor")) > 0) {
+    # if (length(ls(pattern = "gam_ECor")) > 0) {
+    if (exists("gam_ECor_N")){
       presx <- predict(gam_ECor_P$gam, dat_x, type="response")
       abundx <- exp(predict(gam_ECor_N$gam, dat_x, type="response"))
       dat_x$pred_x <- presx * abundx
@@ -138,7 +139,8 @@ performance_plotMaps_function <- function(om = om){
     r_pred <- rasterFromXYZ(dat_x[,c("lon","lat","pred_x")])
     plot(r_pred, asp=1, main=paste0("Predicted, glm_ESt, year ", year_x))
     
-    if (length(ls(pattern = "glm_ESr")) > 0) {
+    # if (length(ls(pattern = "glm_ESr")) > 0) {
+    if (exists("glm_ESr_N")){
       presx <- predict_glmm(glm_ESr_P)
       presx <- exp(presx$est)/(1 + exp(presx$est))
       abundx <- predict_glmm(glm_ESr_N)
@@ -149,7 +151,8 @@ performance_plotMaps_function <- function(om = om){
       plot(r_obs <- 0, main="NA")
     }
     
-    if (length(ls(pattern = "glm_Sr")) > 0) {
+    # if (length(ls(pattern = "glm_Sr")) > 0) {
+    if (exists("glm_Sr_N")){
       presx <- predict_glmm(glm_Sr_P)
       presx <- exp(presx$est)/(1 + exp(presx$est))
       abundx <- predict_glmm(glm_Sr_N)
