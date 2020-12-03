@@ -19,6 +19,10 @@ sdm_rmse <- function(dat_hist, dat_fcast) {
     sqrt(mean((p - o)^2))
   }
   
+  RRMSE = function(p, o){
+    sqrt(mean((p - o)^2)) / mean(o)
+  }
+  
   all_mods <- c("gam_E","gam_S","gam_ES","gam_EST","gam_ECor",
                 "brt_E","brt_S","brt_ES","brt_EST",
                 "mlp_E","mlp_S","mlp_ES","mlp_EST",
