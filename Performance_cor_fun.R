@@ -80,16 +80,16 @@ sdm_cor <- function(dat_hist, dat_fcast) {
   
   par(mfrow=c(ceiling(length(mods)/3),3), mar=c(2.5,4,2.5,1))
   
-  for (m in mods) {  #plot degregdation of RMSE over time (if any)
+  for (m in mods) {  #plot degregdation of COR over time (if any)
     plot(cor_abund_all_y$year, cor_abund_all_y[,m], type="l", lwd=2, col="red",
          ylab="cor", xlab="", main=paste(m), ylim=c(min(cor_abund_all_y[,m]),max(cor_abund_all_y[,m])))
-    abline(h=mean(cor_abund_allh_y[,m]), lty=2, col="blue")  #mean annual rmse of historical period
+    abline(h=mean(cor_abund_allh_y[,m]), lty=2, col="blue")  #mean annual cor of historical period
   }
 
   
-  return(list(rmse_abund_all = rmse_abund_all,
-              rmse_abund_annual = rmse_abund_annual,
-              rmse_abund_all_year = rmse_abund_all_y))
+  return(list(cor_abund_all = cor_abund_all,
+              cor_abund_annual = cor_abund_annual,
+              cor_abund_all_year = cor_abund_all_y))
          
 }
 
