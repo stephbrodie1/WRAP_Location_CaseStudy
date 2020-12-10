@@ -4,7 +4,8 @@
 
 #Code contributions from Kelly Andrews and Steph
 
-dir="~/Dropbox/WRAP Location^3/Rasters_2d_monthly/had/"
+dir="~/Dropbox/WRAP Location^3/Rasters_2d_Spring/gfdl/"
+
 
 SimulateWorld_ROMS_Groundfish <- function(dir){
   #dir is the local directory that points to where ROMS data is stored 
@@ -20,7 +21,6 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
   #----Create output file----
   #Assuming 500 'samples' are taken each year, from 1980-2100
   #This will be the information passed to the estimation model
-  nsamples <- 500  #number of samples to use in the estimation model
   gridcells <- 4012 
   output <- as.data.frame(matrix(NA, nrow=(gridcells*121),ncol=10))
   colnames(output) <- c("lon","lat","year","pres","suitability","btemp","O2", "z",'stemp', "sampled")
@@ -32,42 +32,9 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
   files_O2 <- list.files(paste0(dir,'oxygen_bottom'), full.names = TRUE, pattern=".grd") 
   years <- seq(1980,2100,1)
   
-  #----Creating own function of these equations for Virtualspecies:formatFunctions----
-  #ADULTS - We have equations and coefficients from Eric Ward (4/7/2020) extracted from a species distribution model for sablefish using NWFSC groundfish bottom trawl data and associated environmental data collected during the trawl survey. These equations are in logit space so they need transformed: probability of occurrence = exp(z) / (1 + exp(z)); Where ‘z’ is any of the equations.
-  # logit.function <- function(x, a, b, c){
-  #   exp(a*x^2 + b*x + c)/(1+exp(a*x^2 + b*x + c))
-  # }
-  # 
-  # #Load the coefficients for each of the enivronmental variables independently and create three preference layers that get combined into a suitability map. 
-  # #Depth model equation: logit(x) = -1.503e+00 + 1.074e-02*depth + -7.389e-06*(depth^2)
-  # # so f(depth)= a*depth^2 + b*depth + c
-  # ad = -7.389e-06
-  # bd = 1.074e-02
-  # cd = -1.503e+00
-  # 
-  # #O2: Notes about dissolved oxygen - 
-  # #(1) DO < 1.43mL L-1 is typically identified as hypoxic, with severe hypoxia DO < 0.5ml l-1 --> equates to 64mmol/m3 and 22 mmol/m3
-  # #(2) Average DO levels across groundfish bottom trawl survey: 1.13 to 1.46 between 2008 to 2014 with most years around 1.2 ml/L
-  # #O2 model equation: logit(x) = 1.75745 + -0.81545*o2 + -0.03451*(o2^2)
-  # # The ROMS data are in mmol m-3, so need to convert our coefficient units (ml/L) into (mmol/m3): 
-  # # 1 ml/l = 10^3/22.391 μmol/l = 44.661 μmol/l = 0.044661 mmol/L = 0.00004466 mmol/m-3
-  # #SB: 1ml/l = 10^3/22.391 = 44.661 umol/l; umol/l = mmol/m-3
-  # #equation becomes: logit(x) = 7.848772e-05 + -3.6418e-05*o2 + -1.541217e-06*(o2^2)
-  # # so f(o2)= a*o2^2 + b*o2 + c
-  # ao = -1.541217e-06
-  # bo = -3.6418e-05
-  # co = 7.848772e-05
-  # 
-  # #bottomtemp model equation:  logit(x) = 3.904146    + -0.446772*temp   -0.003029*(temp^2)
-  # # so f(btemp)= a*btemp^2 + b*btemp + c
-  # at = -0.003029
-  # bt = -0.446772
-  # ct = 3.904146
-  
- 
-  #---Load in time series of age-0 recruitment abundance estimates from stock assessment----
+    #---Load in time series of age-0 recruitment abundance estimates from stock assessment----
   #Recruitment drives population growth
-  pop <-read.csv('~/Downloads/Groundfish OM/2019 assessment recruits.csv', header = TRUE)
+  pop <-read.csv('~/PROJECTS/WRAP Location/Groundfish_2019_AssessmentRecruits.csv', header = TRUE)
   pop <- pop[,c(1,6,10,11)]
   pop$year <- pop$Year-1979
   # plot(pop$Year,pop$Age.0,type='l')
@@ -104,7 +71,7 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
   Age.0p$year <- Age.0p$years-1979
   # plot(Age.0p$years,Age.0p$Age.0p, type='l',xlab="years",ylab="Age-0 abundance")
   # lines(Age.0p$years[1:39],Age.0p$Age.0p[1:39],col='blue')
-  Age.0p$Age.0p_norm <- BBmisc::normalize(Age.0p$Age.0p,method = "range",range=c(0.9,1)) #use this range to vary prevalence according to popn. dynamics below. KA: using this range creates prevalence values that are >1 down below which throws an error. I've ifelse'd this to simply use "1" when >1, but this doesn't allow for boom years to be accounted for properly???
+  Age.0p$Age.0p_norm <- BBmisc::normalize(Age.0p$Age.0p,method = "range",range=c(0.7,1)) #use this range to vary prevalence according to popn. dynamics below. KA: using this range creates prevalence values that are >1 down below which throws an error. I've ifelse'd this to simply use "1" when >1, but this doesn't allow for boom years to be accounted for properly???
   # plot(Age.0p$years,Age.0p$Age.0p_norm, type='l',xlab="years",ylab="Age-0 normalized abundance")
   # lines(Age.0p$years[1:39],Age.0p$Age.0p_norm[1:39],col='blue')
 
@@ -118,6 +85,17 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
     btemp <- raster(files_btemp[y])
     O2 <- raster(files_O2[y])
     z <- raster("~/Dropbox/WRAP Location^3/Rasters_2d_Spring/had/bottom_layer_depth.grd")
+    # rug <- focal(z, w=matrix(1,nrow=7,ncol=7), fun=sd, na.rm=TRUE, pad=T)
+    
+    if(y<=2){
+      stemp_t2 <- raster(files_stemp[y])
+      btemp_t2 <- raster(files_btemp[y])
+      O2_t2 <- raster(files_O2[y])
+    } else{
+      stemp_t2 <- raster(files_stemp[y-2])
+      btemp_t2 <- raster(files_btemp[y-2])
+      O2_t2 <- raster(files_O2[y-2])
+    }
     
     #----create a mask of a smaller domain-----
     #This is to force OM to operate within a domain appropriate to sablefish.
@@ -149,10 +127,17 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
     # plot(rt,xlim=c(-134,-115),ylim=c(30,48),col="light blue")
     # map('worldHires',add=T)
     
-    stemp <- mask(stemp,rt)
-    btemp <- mask(btemp,rt)
-    O2 <- mask(O2,rt)
-    z <- mask(z,rt)
+    # rt <- z
+    # rt[rt>1800] <- NA
+    
+    stemp <- raster::mask(stemp,rt)
+    btemp <- raster::mask(btemp,rt)
+    O2 <- raster::mask(O2,rt)
+    stemp_t2 <- raster::mask(stemp_t2,rt)
+    btemp_t2 <- raster::mask(btemp_t2,rt)
+    O2_t2 <- raster::mask(O2_t2,rt)
+    z <- raster::mask(z,rt)
+    # rug <- raster::mask(rug,rt)
     #Optional: plot environmental layers
     # par(mfrow=c(1,3),mar=c(5, 4, 4, 5))
     # plot(btemp, xlim=c(-126,-116),ylim=c(30,48), main= paste0('Bottom temperature ',years[y]))
@@ -162,22 +147,27 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
     #----assign response curves----
     #Stack rasters
     spA_stack <- stack(z,btemp,O2)
-    names(spA_stack) <- c('z','btemp','O2')
+    names(spA_stack) <- c("z","btemp","O2")
+    
+    spA_stack_t2 <- stack(z,btemp_t2,O2_t2)
+    names(spA_stack_t2) <- c("z","btemp_t2","O2_t2")
 
     #Assign preferences
-    # spA_parameters <- formatFunctions(z = c(fun = 'logit.function', a=ad, b=bd, c=cd),
-    #                                   btemp = c(fun = 'logit.function', a=at, b=bt, c=ct), #0.9673 max value
-    #                                   O2 = c(fun = 'logit.function', a=ao, b=bo, c=co)) #KA: O2 has very little influence in Eric Ward's full model, so I'm not sure if it's worth having in here???
-    #                                   
     spA_parameters <- formatFunctions(z = c(fun = 'dnorm', mean = 900 , sd = 1600),
-                                      btemp = c(fun = 'dnorm',mean = 2 , sd = 4),
-                                      O2 = c(fun = 'dnorm',mean = 67 , sd = 80))
-                                      #O2 = c(fun = 'logisticFun', alpha = 40, beta = 150)) #KA: O2 has very little influence in Eric Ward's full model, so I'm not sure if it's worth having in here???
-    
+                                      btemp = c(fun = 'dnorm',mean = 4 , sd = 3),
+                                      O2 = c(fun = 'dnorm',mean = 57 , sd = 62))
+    spA_parameters_t2 <- formatFunctions(z = c(fun = 'dnorm', mean = 900 , sd = 1600),
+                                      btemp_t2 = c(fun = 'dnorm',mean = 4 , sd = 3),
+                                      O2_t2 = c(fun = 'dnorm',mean = 57 , sd = 62))
+                                     
     spA_suitability <- generateSpFromFun(spA_stack,
                                          parameters=spA_parameters, 
                                          rescale = FALSE,
                                          rescale.each.response = FALSE) #Important: make sure rescaling is false. Doesn't work well in the 'for' loop. 
+    spA_suitability_t2 <- generateSpFromFun(spA_stack_t2,
+                                         parameters=spA_parameters_t2, 
+                                         rescale = FALSE,
+                                         rescale.each.response = FALSE)
     # plot(spA_suitability$suitab.raster) #plot habitat suitability
     # virtualspecies::plotResponse(spA_suitability) #plot response curves
     # #manually rescale -
@@ -189,16 +179,27 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
     ref_max_z <- dnorm(spA_parameters$z$args[1], mean=spA_parameters$z$args[1], sd=spA_parameters$z$args[2])
     ref_max_btemp <- dnorm(spA_parameters$btemp$args[1], mean=spA_parameters$btemp$args[1], sd=spA_parameters$btemp$args[2])
     ref_max_O2 <-dnorm(spA_parameters$O2$args[1], mean=spA_parameters$O2$args[1], sd=spA_parameters$O2$args[2])
-
-    ref_max <- ref_max_z * ref_max_btemp * ref_max_O2 #this should equal ~0.4156
+    ref_max <-  ref_max_btemp * ref_max_O2  * ref_max_z 
     spA_suitability$suitab.raster <- (1/ref_max)*spA_suitability$suitab.raster #JS/BM: rescaling suitability, so the max suitbaility is only when optimum is encountered
+      spA_suitability_t2$suitab.raster <- (1/ref_max)*spA_suitability_t2$suitab.raster #JS/BM: rescaling suitability, so the max suitbaility is only when optimum is encountered
     # print(spA_suitability$suitab.raster)
+    # print(spA_suitability_t2$suitab.raster)
+    # mean(spA_suitability_t2$suitab.raster@data@values, na.rm=T)
     # plot(spA_suitability$suitab.raster, xlim=c(-126,-116),ylim=c(30,48), main=paste0("Habitat Suitability ",years[y])) #plot habitat suitability
+    # plot(spA_suitability_t2$suitab.raster, xlim=c(-126,-116),ylim=c(30,48), main=paste0("Habitat Suitability ",years[y])) #plot habitat suitability
     
     #----Convert suitability to Presence-Absence----
     #Use a specific function to convert suitability (0-1) to presence or absence (1 or 0)
     set.seed(y)
     suitability_PA <- virtualspecies::convertToPA(spA_suitability, 
+                                                  PA.method = "probability",
+                                                  prob.method = "logistic", 
+                                                  beta = 0.4, 
+                                                  alpha = -0.07, 
+                                                  species.prevalence = NULL, 
+                                                  plot = FALSE)
+    set.seed(y)
+    suitability_PA_t2 <- virtualspecies::convertToPA(spA_suitability_t2, 
                                                   PA.method = "probability",
                                                   prob.method = "logistic", 
                                                   beta = 0.4, 
@@ -237,6 +238,7 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
     df <- cbind(as.data.frame(presence.points$sample.points$x),as.data.frame(presence.points$sample.points$y))
     colnames(df) <- c("lon","lat")
     df$sampled <- 1
+    
     #----Extract data for each year----
     print("Extracting suitability")
     ei <- gridcells*y #end location in output grid to index to
@@ -246,6 +248,7 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
     output$year[se:ei] <- rep(years[y],gridcells)
     output$pres[se:ei] <- rasterToPoints(suitability_PA$pa.raster)[,3] 
     output$suitability[se:ei] <- rasterToPoints(suitability_PA$suitab.raster)[,3] 
+    output$suitability_t2[se:ei] <- rasterToPoints(suitability_PA_t2$suitab.raster)[,3]
     output$btemp[se:ei] <-  rasterToPoints(btemp)[,3]
     output$O2[se:ei] <- rasterToPoints(O2)[,3]
     output$z[se:ei] <-  rasterToPoints(z)[,3]
@@ -256,6 +259,11 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
     output$sampled[se:ei] <- temp_sampled$sampled
     output$pop_notnorm[se:ei] <- Age.0p$Age.0p[Age.0p$year==y]
     output$pop_norm[se:ei] <-  Age.0p$Age.0p_norm[Age.0p$year==y]
+    if(y<=2){
+      output$pop_norm_t2[se:ei] <-  Age.0p$Age.0p_norm[Age.0p$year==y]
+    } else {
+      output$pop_norm_t2[se:ei] <-  Age.0p$Age.0p_norm[Age.0p$year==y-2]
+    }
     
   }
   
@@ -270,20 +278,17 @@ SimulateWorld_ROMS_Groundfish <- function(dir){
   # ssb <- read.csv('Sablefish abundance time series from stock assessment.csv', header=TRUE)
   # a_presences <- nrow(filter(output,pres==1)) #this identifies the number of grid cells with 'presences' in which to average the biomass across
   
-  a_mean <- log((258256 / gridcells )*2.5) #divide by number of grid cells, but multiply by 2 to offset multiplying by suitablity & pop below
-  a_sd <- log((85152 / gridcells)/18) 
+  a_mean <- log((228000 / gridcells )*3) #divide by number of grid cells, but multiply by 2 to offset multiplying by suitablity & pop below
+  a_sd <- log((85152 / gridcells)/17) 
   # hist(rlnorm(gridcells,a_mean,a_sd))
-  # sum(rlnorm(gridcells,a_mean,a_sd))
-  # sum(rlnorm(nsamples,a_mean,a_sd))
-  # # a_mean <- 258256 /150 
-  # a_sd <- 85152 / 150 / 5 
+  # # a_mean <- 258256 /150
+  # a_sd <- 85152 / 150 / 5
   # output$abundance_2 <- ifelse(output$pres==1,rlnorm(nrow(output),a_mean, a_sd)*output$suitability,0)
   
-  for (y in 1980:2100){
-    output$pop_norm_t2 <- ifelse(output$year<=1981,output$pop_norm[output$year==y] * output$suitability[output$year==y],output$pop_norm[output$year==y - 2 ] * output$suitability[output$year== y-2])
-  }
+  
+  
   # output$abundance <- ifelse(output$pres==1,rlnorm(nrow(output),a_mean, a_sd)*output$suitability*output$pop_norm,0)
-  output$abundance <- ifelse(output$pres==1,rlnorm(nrow(output),a_mean, a_sd)*output$suitability*output$pop_norm_t2,0)
+  output$abundance <- ifelse(output$pres==1,rlnorm(nrow(output),a_mean, a_sd)*output$suitability_t2*output$pop_norm_t2,0)
   # sum(output$abundance, na.rm=T)
   # output$abundance_2 <- output$abundance * output$pop_prev
 
