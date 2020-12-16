@@ -13,12 +13,13 @@ library(cmocean)
 library(ncdf4)
 library(raster)
 library(gridExtra)
+library(gratia)
 
 #----FIGURE ONE----
 #Conceptual diagram of OM and EMs
 #Will be done in powerpoint.
 
-#----FIGURE TWO: environmental timeseries & maps----
+#----FIGURE 2: environmental timeseries & maps----
 #Show time-series of environmental covariates in each domain
 # 3x4 plot
 #col 1 & 3: spatial maps of historical variables (use gfdl)
@@ -246,7 +247,7 @@ grid.arrange(map1, ts1, map2, ts2,
               nrow=3,ncol=4)
 dev.off()
 
-#----FIGURE THREE: biomass timeseries-----
+#----FIGURE 3: biomass timeseries-----
 #Ensemble mean and ESM comparison
 # 1x3 plot for each archetype, with each plot showing ensemble mean + error for 3 ESMs. 
 # Start with one species
@@ -343,6 +344,102 @@ gfs_biomass <- ggplot(data=species_biomass[[3]],aes(x=year,y=abundance, ymin=min
   facet_wrap(~esm)
 
 tiff('~/PROJECTS/WRAP Location/Manuscript/Figures/Fig3.tiff',res=300,units="in",height=10,width=13)
+grid.arrange(hms_biomass, cps_biomass, gfs_biomass, nrow=3)
+dev.off()
+
+#----FIGURE 3.1: biomass timeseries by region-----
+#Ensemble mean and ESM comparison
+# 1x3 plot for each archetype, with each plot showing ensemble mean + error for 3 ESMs. 
+#For each result, plot regional 30-34.5, 34.5-40, 40-48
+
+#Load in predictions made in EM files
+species_biomass <- list()
+counter=1
+for(s in c("Albacore EMs","Anchovy EMs","Groundfish EMs")){
+  print(s)
+  had_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","had","/dat_hist_results_full.rds"))
+  had_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","had","/dat_fcast_results_full.rds"))
+  gfdl_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","gfdl","/dat_hist_results_full.rds"))
+  gfdl_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","gfdl","/dat_fcast_results_full.rds"))
+  ipsl_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","ipsl","/dat_hist_results_full.rds"))
+  ipsl_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","ipsl","/dat_fcast_results_full.rds"))
+  #Rbind historical and forecast years
+  had_allyears <- rbind(had_dat_hist,had_dat_fcast)
+  gfdl_allyears <- rbind(gfdl_dat_hist,gfdl_dat_fcast)
+  ipsl_allyears <- rbind(ipsl_dat_hist,ipsl_dat_fcast)
+  #Combine all ESMs into one file
+  all_esm_allyears <- rbind(had_allyears,gfdl_allyears,ipsl_allyears)
+  all_esm_allyears$esm <- rep(c("HAD","GFDL","IPSL"),each=58000)
+  #create ensemble mean (remove Gam_S & Gam_EST)
+  all_esm_allyears$ens_mean <- apply(all_esm_allyears[,c("gam_E","gam_ES", "gam_ECor",
+                                                         "glm_E" ,"glm_ESt", "glm_ESr",   
+                                                         "brt_E" , "brt_ES", "brt_EST" ,  
+                                                         "mlp_E" , "mlp_ES" ,"mlp_EST" )],MARGIN = 1, FUN=function(x) {mean(x,na.rm=T)}) #removing gam_S from ensemble
+  #keep necessary columns
+  all_esm_allyears <- all_esm_allyears[,c("lon","lat","year","abundance",
+                                          "gam_E","gam_ES", "gam_ECor",
+                                          "glm_E" ,"glm_ESt", "glm_ESr",   
+                                          "brt_E" , "brt_ES", "brt_EST" ,  
+                                          "mlp_E" , "mlp_ES" ,"mlp_EST","esm","ens_mean")]
+  
+  #Assign region
+  all_esm_allyears$region <- ifelse(all_esm_allyears$lat<=34.5,'South', 
+                                    ifelse(all_esm_allyears$lat>=40, "North", "Central"))
+    
+  #aggregate over space
+  all_esm_agg <-all_esm_allyears %>% group_by(year,esm, region) %>% summarise_at(c("abundance","gam_E", "gam_ES", "gam_ECor",
+                                                                                   "glm_E" ,"glm_ESt", "glm_ESr",   
+                                                                                   "brt_E" , "brt_ES", "brt_EST" ,  
+                                                                                   "mlp_E" , "mlp_ES" ,"mlp_EST" ,"ens_mean"), sum)
+  all_esm_agg$mlp_E <- ifelse(all_esm_agg$mlp_E==0,NA,all_esm_agg$mlp_E)
+  all_esm_agg$mlp_ES <- ifelse(all_esm_agg$mlp_ES==0,NA,all_esm_agg$mlp_ES)
+  all_esm_agg$mlp_EST <- ifelse(all_esm_agg$mlp_EST==0,NA,all_esm_agg$mlp_EST)
+  all_esm_agg$min <- apply(all_esm_agg[,c("gam_E","gam_ES", "gam_ECor",
+                                          "glm_E" ,"glm_ESt", "glm_ESr",   
+                                          "brt_E" , "brt_ES", "brt_EST" ,  
+                                          "mlp_E" , "mlp_ES" ,"mlp_EST")],1,FUN=function(x){min(x,na.rm=T)})
+  all_esm_agg$max <- apply(all_esm_agg[,c("gam_E","gam_ES", "gam_ECor",
+                                          "glm_E" ,"glm_ESt", "glm_ESr",   
+                                          "brt_E" , "brt_ES", "brt_EST" ,  
+                                          "mlp_E" , "mlp_ES" ,"mlp_EST")],1,FUN=function(x){max(x,na.rm=T)})
+  # all_esm_agg$relative_biomass <- all_esm_agg$ens_mean / all_esm_agg$abundance
+  all_esm_agg_longer <- melt(all_esm_agg,id=c("year", "esm","region", "min", "max"), variable.name = "EM",value.name = "abundance")
+  all_esm_agg_longer_filtered <- all_esm_agg_longer[all_esm_agg_longer$EM=="ens_mean",]
+  species_biomass[[counter]]<- all_esm_agg_longer_filtered
+  counter=counter+1
+}
+
+hms_biomass <- ggplot(data=species_biomass[[1]],aes(x=year,y=abundance, ymin=min,ymax=max))+
+  geom_line(aes(col=region))+
+  scale_color_manual(values=c("#2980b9","#c0392b","#16a085"))+
+  # geom_ribbon(alpha=0.5)+
+  theme_classic()+
+  labs(x="",y="HMS Biomass")+
+  theme(legend.title = element_blank())+
+  geom_vline(xintercept = 2010, linetype="dashed")+
+  facet_wrap(~esm)
+
+cps_biomass <- ggplot(data=species_biomass[[2]],aes(x=year,y=abundance, ymin=min,ymax=max))+
+  geom_line(aes(col=region))+
+  scale_color_manual(values=c("#2980b9","#c0392b","#16a085"))+
+  # geom_ribbon(alpha=0.5)+
+  theme_classic()+
+  labs(x="",y="CPS Biomass")+
+  theme(legend.title = element_blank())+
+  geom_vline(xintercept = 2010, linetype="dashed")+
+  facet_wrap(~esm)
+
+gfs_biomass <- ggplot(data= species_biomass[[3]],aes(x=year,y=abundance, ymin=min,ymax=max))+
+  geom_line(aes(col=region))+
+  scale_color_manual(values=c("#2980b9","#c0392b","#16a085"))+
+  # geom_ribbon(alpha=0.5)+
+  theme_classic()+
+  labs(x="",y="Groundfish Biomass")+
+  theme(legend.title = element_blank())+
+  geom_vline(xintercept = 2010, linetype="dashed")+
+  facet_wrap(~esm)
+
+tiff('~/PROJECTS/WRAP Location/Manuscript/Figures/Fig3.1.tiff',res=300,units="in",height=10,width=13)
 grid.arrange(hms_biomass, cps_biomass, gfs_biomass, nrow=3)
 dev.off()
 
@@ -463,7 +560,7 @@ for(s in c("Albacore EMs","Anchovy EMs","Groundfish EMs")){
                                           "mlp_E" , "mlp_ES" ,"mlp_EST","esm","ens_mean")]
   
   #Calculate RMSE
-  RMSE = function(p, o){(sqrt(mean((p - o)^2)))}
+  RMSE = function(p, o){(sqrt(mean((p - o)^2))) / mean(o)}
   #aggregate over space
   all_esm_agg <-all_esm_allyears %>% group_by(year,esm) %>% summarise_at(c("gam_E", "gam_ES", "gam_ECor",
                                                                            "glm_E" ,"glm_ESt", "glm_ESr",   
@@ -622,6 +719,231 @@ dev.off()
 
 
 
+#----FIGURE 4.6: Maps of correlations------
+#Map of correlations averaged over ~10years
+#Load in predictions made in EM files
+species_cor_spatial <- list()
+counter=1
+for(s in c("Albacore EMs","Anchovy EMs","Groundfish EMs")){
+  print(s)
+  had_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","had","/dat_hist_results_full.rds"))
+  had_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","had","/dat_fcast_results_full.rds"))
+  gfdl_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","gfdl","/dat_hist_results_full.rds"))
+  gfdl_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","gfdl","/dat_fcast_results_full.rds"))
+  ipsl_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","ipsl","/dat_hist_results_full.rds"))
+  ipsl_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","ipsl","/dat_fcast_results_full.rds"))
+  #Rbind historical and forecast years
+  had_allyears <- rbind(had_dat_hist,had_dat_fcast)
+  gfdl_allyears <- rbind(gfdl_dat_hist,gfdl_dat_fcast)
+  ipsl_allyears <- rbind(ipsl_dat_hist,ipsl_dat_fcast)
+  #Combine all ESMs into one file
+  all_esm_allyears <- rbind(had_allyears,gfdl_allyears,ipsl_allyears)
+  all_esm_allyears$esm <- as.factor(rep(c("HAD","GFDL","IPSL"),each=58000))
+  #create ensemble mean (remove Gam_S & Gam_EST)
+  all_esm_allyears$ens_mean <- apply(all_esm_allyears[,c("gam_E","gam_ES", "gam_ECor",
+                                                         "glm_E" ,"glm_ESt", "glm_ESr",   
+                                                         "brt_E" , "brt_ES", "brt_EST" ,  
+                                                         "mlp_E" , "mlp_ES" ,"mlp_EST" )],MARGIN = 1, FUN=function(x) {mean(x,na.rm=T)}) #removing gam_S from ensemble
+  #keep necessary columns
+  all_esm_allyears <- all_esm_allyears[,c("lon","lat","year","abundance",
+                                          "gam_E","gam_ES", "gam_ECor",
+                                          "glm_E" ,"glm_ESt", "glm_ESr",   
+                                          "brt_E" , "brt_ES", "brt_EST" ,  
+                                          "mlp_E" , "mlp_ES" ,"mlp_EST","esm","ens_mean")]
+  #Allocate decade 
+  # all_esm_allyears$decade <- ifelse(all_esm_allyears$year<=2010,1985, #OLD CODE
+  #                                   ifelse(all_esm_allyears$year>=2011 & all_esm_allyears$year<2100 , all_esm_allyears$year - all_esm_allyears$year %% 10,
+  #                                          ifelse( all_esm_allyears$year==2100,2090, NA)))
+  all_esm_allyears$decade <- ifelse(all_esm_allyears$year<=2010,"1985-2010",
+                                    ifelse(all_esm_allyears$year>=2011 & all_esm_allyears$year<=2040, "2011-2040",
+                                           ifelse(all_esm_allyears$year>=2041 & all_esm_allyears$year<=2070, "2041-2070",
+                                                  ifelse(all_esm_allyears$year>=2071, "2071-2100", NA))))
+  all_esm_allyears$lat_round <- round(all_esm_allyears$lat,0)
+  all_esm_allyears$lon_round <- round(all_esm_allyears$lon,0)
+  
+  #Calculate correlation
+  COR = function(x,y){cor(x,y,method="spearman")}
+  #aggregate by ESM and grid cell
+  all_esm_agg <-all_esm_allyears %>% group_by(lon_round, lat_round, decade, esm) %>% summarise_at(c("gam_E", "gam_ES", "gam_ECor",
+                                                                           "glm_E" ,"glm_ESt", "glm_ESr",   
+                                                                           "brt_E" , "brt_ES", "brt_EST" ,  
+                                                                           "mlp_E" , "mlp_ES" ,"mlp_EST" ,"ens_mean"),funs(COR(., y=abundance)))
+  all_esm_agg_longer <- melt(all_esm_agg,id=c("lat_round","lon_round","decade", "esm"), variable.name = "EM",value.name = "COR")
+  # all_esm_agg_longer_filtered <- all_esm_agg_longer[all_esm_agg_longer$EM=="ens_mean",]
+  species_cor_spatial[[counter]]<- all_esm_agg_longer
+  counter=counter+1
+}
+
+models <- c( "gam_E","gam_ES", "gam_ECor",
+             "glm_E" ,"glm_ESt", "glm_ESr",   
+             "brt_E" , "brt_ES", "brt_EST" ,  
+             "mlp_E" , "mlp_ES" ,"mlp_EST","ens_mean")
+for (m in models){
+  print(m)
+  dat <- species_cor_spatial[[1]]
+  g1 <- ggplot(dat[dat$EM==m,],aes(x=lon_round,y=lat_round))+
+    geom_tile(aes(fill=COR))+
+    scale_fill_gradient2(
+      low = 'red', mid = 'white', high = 'blue',
+      midpoint = 0.5, guide = 'colourbar', aesthetics = 'fill', limits=c(-1,1))+
+    theme_classic()+
+    annotation_map(map_data("world"), colour = "black", fill=grey(0.7))+
+    coord_quickmap(xlim=c(-134,-115.8),ylim=c(30,48))+
+    facet_wrap(~esm + decade, nrow=3)+
+    labs(x="",y="")+
+    theme(legend.title = element_blank())
+  
+  dat <- species_cor_spatial[[2]]
+  g2 <- ggplot(dat[dat$EM==m,],aes(x=lon_round,y=lat_round))+
+    geom_tile(aes(fill=COR))+
+    scale_fill_gradient2(
+      low = 'red', mid = 'white', high = 'blue',
+      midpoint = 0.5, guide = 'colourbar', aesthetics = 'fill', limits=c(-1,1))+
+    theme_classic()+
+    annotation_map(map_data("world"), colour = "black", fill=grey(0.7))+
+    coord_quickmap(xlim=c(-127,-115.8),ylim=c(30,48))+
+    facet_wrap(~esm + decade, nrow=3)+
+    scale_x_continuous(breaks = round(seq(min(dat$lon_round), max(dat$lon_round), by =4),0))+
+    theme(legend.title = element_blank())
+  
+  dat <- species_cor_spatial[[3]]
+  g3 <- ggplot(dat[dat$EM==m,],aes(x=lon_round,y=lat_round))+
+    geom_tile(aes(fill=COR))+
+    scale_fill_gradient2(
+      low = 'red', mid = 'white', high = 'blue',
+      midpoint = 0.5, guide = 'colourbar', aesthetics = 'fill', limits=c(-1,1))+
+    theme_classic()+
+    annotation_map(map_data("world"), colour = "black", fill=grey(0.7))+
+    coord_quickmap(xlim=c(-127,-115.8),ylim=c(30,48))+
+    facet_wrap(~esm + decade, nrow=3)+
+    scale_x_continuous(breaks = round(seq(min(dat$lon_round), max(dat$lon_round), by =4),0))+
+    theme(legend.title = element_blank())
+  
+  tiff(paste0('~/PROJECTS/WRAP Location/Manuscript/Figures/Spatial Correlation Plots/HMS_Spatial_Correlation_allESM_',m,'.tiff'),
+       units="in",width=13, height=10, res=200)
+  plot(g1)
+  dev.off()
+  
+  tiff(paste0('~/PROJECTS/WRAP Location/Manuscript/Figures/Spatial Correlation Plots/CPS_Spatial_Correlation_allESM_',m,'.tiff'),
+       units="in",width=8, height=10, res=200)
+  plot(g2)
+  dev.off()
+  
+  tiff(paste0('~/PROJECTS/WRAP Location/Manuscript/Figures/Spatial Correlation Plots/GFS_Spatial_Correlation_allESM_',m,'.tiff'),
+       units="in",width=8, height=10, res=200)
+  plot(g3)
+  dev.off()
+}
+
+
+
+#----FIGURE 4.7: Maps of RMSE------
+#Map of correlations averaged over ~10years
+#Load in predictions made in EM files
+species_rmse_spatial <- list()
+counter=1
+for(s in c("Albacore EMs","Anchovy EMs","Groundfish EMs")){
+  print(s)
+  had_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","had","/dat_hist_results_full.rds"))
+  had_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","had","/dat_fcast_results_full.rds"))
+  gfdl_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","gfdl","/dat_hist_results_full.rds"))
+  gfdl_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","gfdl","/dat_fcast_results_full.rds"))
+  ipsl_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","ipsl","/dat_hist_results_full.rds"))
+  ipsl_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","ipsl","/dat_fcast_results_full.rds"))
+  #Rbind historical and forecast years
+  had_allyears <- rbind(had_dat_hist,had_dat_fcast)
+  gfdl_allyears <- rbind(gfdl_dat_hist,gfdl_dat_fcast)
+  ipsl_allyears <- rbind(ipsl_dat_hist,ipsl_dat_fcast)
+  #Combine all ESMs into one file
+  all_esm_allyears <- rbind(had_allyears,gfdl_allyears,ipsl_allyears)
+  all_esm_allyears$esm <- as.factor(rep(c("HAD","GFDL","IPSL"),each=58000))
+  #create ensemble mean (remove Gam_S & Gam_EST)
+  all_esm_allyears$ens_mean <- apply(all_esm_allyears[,c("gam_E","gam_ES", "gam_ECor",
+                                                         "glm_E" ,"glm_ESt", "glm_ESr",   
+                                                         "brt_E" , "brt_ES", "brt_EST" ,  
+                                                         "mlp_E" , "mlp_ES" ,"mlp_EST" )],MARGIN = 1, FUN=function(x) {mean(x,na.rm=T)}) #removing gam_S from ensemble
+  #keep necessary columns
+  all_esm_allyears <- all_esm_allyears[,c("lon","lat","year","abundance",
+                                          "gam_E","gam_ES", "gam_ECor",
+                                          "glm_E" ,"glm_ESt", "glm_ESr",   
+                                          "brt_E" , "brt_ES", "brt_EST" ,  
+                                          "mlp_E" , "mlp_ES" ,"mlp_EST","esm","ens_mean")]
+  #Allocate decade
+  all_esm_allyears$decade <- ifelse(all_esm_allyears$year<=2010,"1985-2010",
+                                    ifelse(all_esm_allyears$year>=2011 & all_esm_allyears$year<=2040, "2011-2040",
+                                           ifelse(all_esm_allyears$year>=2041 & all_esm_allyears$year<=2070, "2041-2070",
+                                                  ifelse(all_esm_allyears$year>=2071, "2071-2100", NA))))
+  all_esm_allyears$lat_round <- round(all_esm_allyears$lat,0)
+  all_esm_allyears$lon_round <- round(all_esm_allyears$lon,0)
+  
+  #Calculate correlation
+  RMSE = function(p, o){(sqrt(mean((p - o)^2))) / mean(o)}
+  #aggregate by ESM and grid cell
+  all_esm_agg <-all_esm_allyears %>% group_by(lon_round, lat_round, decade, esm) %>% summarise_at(c("gam_E", "gam_ES", "gam_ECor",
+                                                                                                    "glm_E" ,"glm_ESt", "glm_ESr",   
+                                                                                                    "brt_E" , "brt_ES", "brt_EST" ,  
+                                                                                                    "mlp_E" , "mlp_ES" ,"mlp_EST" ,"ens_mean"),funs(RMSE(., o=abundance)))
+  all_esm_agg_longer <- melt(all_esm_agg,id=c("lat_round","lon_round","decade", "esm"), variable.name = "EM",value.name = "RMSE")
+  all_esm_agg_longer$RMSE <- as.numeric(ifelse(all_esm_agg_longer$RMSE=="Inf", "NA",all_esm_agg_longer$RMSE))
+  # all_esm_agg_longer_filtered <- all_esm_agg_longer[all_esm_agg_longer$EM=="ens_mean",]
+  species_rmse_spatial[[counter]]<- all_esm_agg_longer
+  counter=counter+1
+}
+
+models <- c( "gam_E","gam_ES", "gam_ECor",
+             "glm_E" ,"glm_ESt", "glm_ESr",   
+             "brt_E" , "brt_ES", "brt_EST" ,  
+             "mlp_E" , "mlp_ES" ,"mlp_EST","ens_mean")
+for (m in models){
+  print(m)
+  dat <- species_rmse_spatial[[1]]
+  g1 <- ggplot(dat[dat$EM==m,],aes(x=lon_round,y=lat_round))+
+    geom_tile(aes(fill=log(RMSE)))+
+    scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red',)+
+    theme_classic()+
+    annotation_map(map_data("world"), colour = "black", fill=grey(0.7))+
+    coord_quickmap(xlim=c(-134,-115.8),ylim=c(30,48))+
+    facet_wrap(~esm + decade, nrow=3)+
+    labs(x="",y="")+
+    theme(legend.title = element_blank())
+  
+  dat <- species_rmse_spatial[[2]]
+  g2 <- ggplot(dat[dat$EM==m,],aes(x=lon_round,y=lat_round))+
+    geom_tile(aes(fill=log(RMSE)))+
+    scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red',)+
+    theme_classic()+
+    annotation_map(map_data("world"), colour = "black", fill=grey(0.7))+
+    coord_quickmap(xlim=c(-127,-115.8),ylim=c(30,48))+
+    facet_wrap(~esm + decade, nrow=3)+
+    scale_x_continuous(breaks = round(seq(min(dat$lon_round), max(dat$lon_round), by =4),0))+
+    theme(legend.title = element_blank())
+  
+  dat <- species_rmse_spatial[[3]]
+  g3 <- ggplot(dat[dat$EM==m,],aes(x=lon_round,y=lat_round))+
+    geom_tile(aes(fill=log(RMSE)))+
+    scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red',)+
+    theme_classic()+
+    annotation_map(map_data("world"), colour = "black", fill=grey(0.7))+
+    coord_quickmap(xlim=c(-127,-115.8),ylim=c(30,48))+
+    facet_wrap(~esm + decade, nrow=3)+
+    scale_x_continuous(breaks = round(seq(min(dat$lon_round), max(dat$lon_round), by =4),0))+
+    theme(legend.title = element_blank())
+  
+  tiff(paste0('~/PROJECTS/WRAP Location/Manuscript/Figures/Spatial RMSE Plots/HMS_Spatial_RMSE_allESM_',m,'.tiff'),
+       units="in",width=13, height=10, res=200)
+  plot(g1)
+  dev.off()
+  
+  tiff(paste0('~/PROJECTS/WRAP Location/Manuscript/Figures/Spatial RMSE Plots/CPS_Spatial_RMSE_allESM_',m,'.tiff'),
+       units="in",width=8, height=10, res=200)
+  plot(g2)
+  dev.off()
+  
+  tiff(paste0('~/PROJECTS/WRAP Location/Manuscript/Figures/Spatial RMSE Plots/GFS_Spatial_RMSE_allESM_',m,'.tiff'),
+       units="in",width=8, height=10, res=200)
+  plot(g3)
+  dev.off()
+}
 #----FIGURE 5: Latitudinal COG timeseries----
 #Compare COG for each year to average in historical period, showing ensemble mean
 
@@ -1063,7 +1385,7 @@ grid.arrange(hms_cor, cps_cor, gfs_cor, nrow=3)
 dev.off()
 
 
-#-----FIGURE 8: Fitted years Correlation (also RMSE)-------
+#----FIGURE 8: Fitted years Correlation (also RMSE)-------
 #Load in predictions made in EM files
 species_predperf <- list()
 counter=1
@@ -1167,7 +1489,7 @@ tiff('~/PROJECTS/WRAP Location/Manuscript/Figures/Fig8.tiff',res=300,units="in",
 grid.arrange(hms_cor, cps_cor, gfs_cor, nrow=3)
 dev.off()
 
-#---FIGURE 9: Forecast RMSE of good models ----
+#----FIGURE 9: Forecast RMSE of good models ----
 #Load in predictions made in EM files
 species_predperf <- list()
 counter=1
@@ -1262,7 +1584,7 @@ tiff('~/PROJECTS/WRAP Location/Manuscript/Figures/Fig9.tiff',res=300,units="in",
 grid.arrange(hms_rmse, cps_rmse, gfs_rmse, nrow=3)
 dev.off()
 
-#-----FIGURE 10: environmental density plots-----
+#----FIGURE 10: environmental density plots-----
 
 #Load in predictions made in EM files
 species_enviro_density <- list()
@@ -1279,15 +1601,15 @@ for(s in c("Albacore EMs","Anchovy EMs","Groundfish EMs")){
   had_allyears <- rbind(had_dat_hist,had_dat_fcast)
   gfdl_allyears <- rbind(gfdl_dat_hist,gfdl_dat_fcast)
   ipsl_allyears <- rbind(ipsl_dat_hist,ipsl_dat_fcast)
-  if (s =="Groundfish EMs"){ #do this because MLPs weren't working correctly
-    had_allyears$mlp_ES <- NA
-    gfdl_allyears$mlp_E <- NA
-    gfdl_allyears$mlp_ES <- NA
-    ipsl_allyears$mlp_ES <- NA
-    had_allyears <- had_allyears[,c(1:37,38,40,39)]
-    gfdl_allyears <- gfdl_allyears[,c(1:37,39,40,38)]
-    ipsl_allyears <- ipsl_allyears[,c(1:37,38,40,39)]
-  }
+  # if (s =="Groundfish EMs"){ #do this because MLPs weren't working correctly
+  #   had_allyears$mlp_ES <- NA
+  #   gfdl_allyears$mlp_E <- NA
+  #   gfdl_allyears$mlp_ES <- NA
+  #   ipsl_allyears$mlp_ES <- NA
+  #   had_allyears <- had_allyears[,c(1:37,38,40,39)]
+  #   gfdl_allyears <- gfdl_allyears[,c(1:37,39,40,38)]
+  #   ipsl_allyears <- ipsl_allyears[,c(1:37,38,40,39)]
+  # }
   #Combine all ESMs into one file
   all_esm_allyears <- rbind(had_allyears,gfdl_allyears,ipsl_allyears)
   all_esm_allyears$esm <- rep(c("HAD","GFDL","IPSL"),each=58000)
@@ -1439,7 +1761,7 @@ tiff('~/PROJECTS/WRAP Location/Manuscript/Figures/Fig11.tiff',res=300,units="in"
 grid.arrange(hms_variance_partition, cps_variance_partition, gfs_variance_partition, nrow=3)
 dev.off()
 
-#---FIGURE 12: Partition variance more closely-----
+#----FIGURE 12: Partition variance more closely-----
 variance_partition_summary <- list()
 counter=1
 for(s in c("Albacore EMs","Anchovy EMs","Groundfish EMs")){
@@ -1548,6 +1870,30 @@ grid.arrange(hms_variancepartition, cps_variancepartition, gfs_variancepartition
 dev.off()
 
 
+
+
+
+#----Figure 13: within model uncertainty-----
+#Need to plot wihtin model uncertainty, and hopefully it's less than between model uncertainty
+#Try first for a GAM for Albacore
+#read in dat files and model objects
+s <- "Albacore EMs"
+had_dat_hist <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","had","/dat_hist_results_full.rds"))
+had_dat_fcast <- readRDS(paste0("~/PROJECTS/WRAP Location/",s,"/","had","/dat_fcast_results_full.rds"))
+load(paste0('~/PROJECTS/WRAP Location/',s,'/had/saved_models_full.RData'))
+
+
+N1 <- fitted_samples(gam_E_N, n=1, newdata=dat_hist, scale="response", seed=99)
+#this is not the same as using 'simulate' or 'predicted_samples' functions...
+#...which I think generate observations, rather than alternate mean values (i.e. fitted values)
+N2 <- predict(gam_E_N, type="response")  #compare this with above to check that values are sensible
+
+# To simulate from the binomial model:
+P1 <- fitted_samples(gam_E_P, n=1, newdata=dat_hist, scale="linear_predictor", seed=99)  #response scale doesn't work for binomial model for some reason
+P1$response <- exp(P1$fitted)/(1 + exp(P1$fitted))  #now on response scale
+P2 <- predict(gam_E_P, type="response")  #compare this with above as check that values are sensible
+
+Abund_rep <- N1$fitted * P1$response
 
 
 
