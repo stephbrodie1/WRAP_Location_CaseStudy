@@ -23,14 +23,14 @@ if ("E" %in% covs) {
                         gbm.x = gbm.x.env,
                         gbm.y = 'pres',
                         family = "bernoulli",
-                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
+                        tree.complexity = 3, learning.rate = 0.001, bag.fraction = 0.6, #making Lr0.001 for temp only anchovy
                         plot.main=FALSE, verbose = FALSE)
     
     brt_E_N <- gbm.step(data=dat_hist[dat_hist$abundance>0,], 
                        gbm.x = gbm.x.env,
                        gbm.y = 'log_abundance',
                        family = "gaussian",
-                       tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
+                       tree.complexity = 3, learning.rate = 0.001, bag.fraction = 0.6,
                        plot.main=FALSE, verbose = FALSE)
     
     presx <- predict(brt_E_P, dat_hist, n.trees=brt_E_P$gbm.call$best.trees, type="response")
@@ -77,14 +77,14 @@ if ("ES" %in% covs) {
                         gbm.x = c(gbm.x.env, "lat", "lon"),
                         gbm.y = 'pres',
                         family = "bernoulli",
-                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
+                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,#made 0.1 for anchovy  temp only EMs
                         plot.main=FALSE, verbose = FALSE)
     
     brt_ES_N <- gbm.step(data=dat_hist[dat_hist$abundance>0,], 
                         gbm.x = c(gbm.x.env, "lat", "lon"),
                         gbm.y = 'log_abundance',
                         family = "gaussian",
-                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
+                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,#made 0.1 for anchovy  temp only EMs
                         plot.main=FALSE, verbose = FALSE)
     
     presx <- predict(brt_ES_P, dat_hist, n.trees=brt_ES_P$gbm.call$best.trees, type="response")
@@ -104,14 +104,14 @@ if ("EST" %in% covs) {
                         gbm.x = c(gbm.x.env, "lat", "lon", "year"),
                         gbm.y = 'pres',
                         family = "bernoulli",
-                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
+                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,#made 0.05 for anchovy  temp only EMs
                         plot.main=FALSE, verbose = FALSE)
     
     brt_EST_N <- gbm.step(data=dat_hist[dat_hist$abundance>0,], 
                         gbm.x = c(gbm.x.env, "lat", "lon", "year"),
                         gbm.y = 'log_abundance',
                         family = "gaussian",
-                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,
+                        tree.complexity = 3, learning.rate = 0.01, bag.fraction = 0.6,#made 0.05 for anchovy  temp only EMs
                         plot.main=FALSE, verbose = FALSE)
     
     presx <- predict(brt_EST_P, dat_hist, n.trees=brt_EST_P$gbm.call$best.trees, type="response")
