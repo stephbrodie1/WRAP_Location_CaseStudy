@@ -26,7 +26,7 @@ if (type == "delta") {
     mlp_E_P <- neuralnet(delta1_formula, data = dat_hist, 
                          hidden = c(3), linear.output = F, algorithm = "rprop+", threshold = 0.2)
     mlp_E_N <- neuralnet(delta2_formula, data = subset(dat_hist, !is.infinite(dat_hist$log_abundance)), 
-                         hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.2)
+                         hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.6)
     
     presx <- as.numeric(predict(mlp_E_P,dat_hist))
     abundx <- as.numeric(predict(mlp_E_N,dat_hist))
@@ -45,7 +45,7 @@ if (type == "delta") {
     mlp_S_P <- neuralnet(pres ~ lat_n + lon_n, data = dat_hist, 
                          hidden = c(3), linear.output = F, algorithm = "rprop+", threshold = 0.2)
     mlp_S_N <- neuralnet(log_abundance ~ lat_n + lon_n, data = subset(dat_hist, !is.infinite(dat_hist$log_abundance)), 
-                         hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.2)
+                         hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.6)
     
     presx <- as.numeric(predict(mlp_S_P,dat_hist))
     abundx <- as.numeric(predict(mlp_S_N,dat_hist))
@@ -64,7 +64,7 @@ if (type == "delta") {
     mlp_ES_P <- neuralnet(update(delta1_formula, ~. + lat_n + lon_n), data = dat_hist, 
                          hidden = c(3), linear.output = F, algorithm = "rprop+", threshold = 0.2)
     mlp_ES_N <- neuralnet(update(delta2_formula, ~. + lat_n + lon_n), data = subset(dat_hist, !is.infinite(dat_hist$log_abundance)), 
-                         hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.2)
+                         hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.6) #changing to 0.3 for anchovy temp only models
     
     presx <- as.numeric(predict(mlp_ES_P,dat_hist))
     abundx <- as.numeric(predict(mlp_ES_N,dat_hist))
@@ -83,7 +83,7 @@ if (type == "delta") {
     mlp_EST_P <- neuralnet(update(delta1_formula, ~. + lat_n + lon_n + year_n), data = dat_hist, 
                           hidden = c(3), linear.output = F, algorithm = "rprop+", threshold = 0.2)
     mlp_EST_N <- neuralnet(update(delta2_formula, ~. + lat_n + lon_n + year_n), data = subset(dat_hist, !is.infinite(dat_hist$log_abundance)), 
-                          hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.2)
+                          hidden = c(3), linear.output = T, algorithm = "rprop+", threshold = 0.5)  #changing to 0.3 for anchovy temp only models
     
     presx <- as.numeric(predict(mlp_EST_P, dat_hist))
     abundx <- as.numeric(predict(mlp_EST_N, dat_hist))
