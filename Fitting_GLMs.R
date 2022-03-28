@@ -107,6 +107,17 @@
       P_glm_E_P$est_prob <- exp(P_glm_E_P$est)/(1 + exp(P_glm_E_P$est))  #as probabilities
       P_glm_E_N <- predict(glm_E_N, newdata = dat)  #abundance part
       P_glm_E_P$est_delta <- P_glm_E_P$est_prob * exp(P_glm_E_N$est)  #'exp' here if using log_abundance as response
+      
+      #TEMPORARY
+      #plot above
+      # plot(aggregate(est_delta ~ year,data=P_glm_E_P, FUN="sum"), type='b')
+      #plot get_index()
+      # P_glm_E_N <- predict(glm_E_N, newdata = dat,return_tmb_object = TRUE )  #abundance part
+      # test <- get_index(P_glm_E_N, bias_correct = TRUE)
+      # ggplot(test, aes(year, est)) + geom_line() +
+      #   geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.4) +
+      #   xlab('Year') + ylab('Biomass estimate (metric tonnes)')
+      
       dat_hist$glm_E <- P_glm_E_P$est_delta[P_glm_E_P$year <= year_fcast]
       dat_fcast$glm_E <- P_glm_E_P$est_delta[P_glm_E_P$year > year_fcast]
     }
