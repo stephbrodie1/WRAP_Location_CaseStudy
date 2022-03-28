@@ -93,20 +93,20 @@ saveRDS(dat_sub, paste0("~/PROJECTS/WRAP Location/Anchovy EMs/",dir_name,"/dat_a
 rm(list = ls())  #remove all objects and re-load necessary ones; consider restarting R too
 
 # load data subset for model fitting
-dir_name <- "gfdl"     #of either "had", "ipsl", "gfdl"
+dir_name <- "ipsl"     #of either "had", "ipsl", "gfdl"
 dat <- readRDS(paste0("~/PROJECTS/WRAP Location/Anchovy EMs/",dir_name,"/dat_anchovy_sub.rds"))
-
-year_fcast <- 2010
+# year_fcast <- 2010
+year_fcast <- 2040
 dat_hist <- dat[dat$year <= year_fcast,]  #subset for model fitting
 dat_fcast <- dat[dat$year > year_fcast,]  #subset for forecast evaluation
 
 
 # --- GAMS ---
 # * fitting ECor will take 1-2 hours
-
 type <- "delta"  #delta or tweedie
 covs <- c("E","S","ES","EST", "ECor")  #covariate combinations, options: c("E","S","ES","EST","ECor")
 env_formula <- "s(temp) + s(chla) + s(z)"  #full: "s(temp) + s(chla) + s(mld)"
+# env_formula <- "s(temp)"
 t1 <- Sys.time()
 source("~/PROJECTS/WRAP Location/WRAP_Location_CaseStudy/Fitting_GAMs.R")
 t2 <- Sys.time()
@@ -136,6 +136,8 @@ type <- "delta"  #only delta at this stage
 covs <- c("E","ES","EST")  #options: c("E","S","ES","EST") #'S' is not really needed, it's run in GAMs as a simple NULL model
 env_formula_BRT <- c("temp", "chla", "z")  #full: c("temp", "chla", "mld")
 env_formula_MLP <- "temp_n + chla_n + z_n"  #full: "temp_n + chla_n + mld_n"; the '_n' indicates range normalised variables
+# env_formula_BRT <- c("temp")  #full: c("temp", "chla", "mld")
+# env_formula_MLP <- "temp_n"
 
 source("~/PROJECTS/WRAP Location/WRAP_Location_CaseStudy/Fitting_BRTs.R")
 source("~/PROJECTS/WRAP Location/WRAP_Location_CaseStudy/Fitting_MLPs.R")
@@ -143,7 +145,7 @@ source("~/PROJECTS/WRAP Location/WRAP_Location_CaseStudy/Fitting_MLPs.R")
 
 # --- Save Results and Models ---
 # * take care not to delete some models by overwriting with a model subset (change saved names if doing testing)
-setwd(paste0('~/PROJECTS/WRAP Location/Anchovy EMs/',dir_name,'/'))
+setwd(paste0('~/PROJECTS/WRAP Location/Anchovy EMs 2040train/',dir_name,'/'))
 saveRDS(dat_hist, "dat_hist_results_full.rds")  # * 'full' [full models] or 'temp' [temp-only models]
 saveRDS(dat_fcast, "dat_fcast_results_full.rds")
 

@@ -90,7 +90,7 @@ saveRDS(dat_sub, paste0("~/PROJECTS/WRAP Location/Groundfish EMs/",dir_name,"/da
 rm(list = ls())  #remove all objects and re-load necessary ones; consider restarting R too
 
 # load data subset for model fitting
-dir_name <- "had"     #of either "had", "ipsl", "gfdl"
+dir_name <- "gfdl"     #of either "had", "ipsl", "gfdl"
 dat <- readRDS(paste0("~/PROJECTS/WRAP Location/Groundfish EMs/",dir_name,"/dat_groundfish_sub.rds"))
 year_fcast <- 2010
 dat_hist <- dat[dat$year <= year_fcast,]  #subset for model fitting
@@ -100,7 +100,8 @@ dat_fcast <- dat[dat$year > year_fcast,]  #subset for forecast evaluation
 # * fitting ECor will take 1-2 hours
 type <- "delta"  #delta or tweedie
 covs <- c("E","S","ES","EST","ECor")  #covariate combinations, options: c("E","S","ES","EST","ECor")
-env_formula <- "s(btemp) + s(O2) + s(z)" 
+env_formula <- "s(btemp) + s(O2) + s(z)"
+# env_formula <- "s(btemp)" 
 
 t1 <- Sys.time()
 source("~/PROJECTS/WRAP Location/WRAP_Location_CaseStudy/Fitting_GAMs.R")
@@ -116,6 +117,9 @@ type <- "delta"  #delta or tweedie
 covs <- c("E", "ESt", "Sr", "ESr")   #options: c("E", "Sr", "ESt", "ESr") 
 env_formula <- "btemp_s + I(btemp_s^2) + z_s + I(z_s^2) + O2_s"  ##no quadratic for O2 in presence part of delta; the '_s' indicates scaled variables
 env_formula_deltaN <- "btemp_s + I(btemp_s^2) + z_s + I(z_s^2) + O2_s"  #no quadratic for O2 in abundance part of delta
+# env_formula <- "btemp_s + I(btemp_s^2)"  ##no quadratic for O2 in presence part of delta; the '_s' indicates scaled variables
+# env_formula_deltaN <- "btemp_s + I(btemp_s^2)"  #no quadratic for O2 in abundance part of delta
+
 
 t1 <- Sys.time()
 source("~/PROJECTS/WRAP Location/WRAP_Location_CaseStudy/Fitting_GLMs.R")
@@ -127,8 +131,11 @@ t2 - t1
 
 type <- "delta"  #only delta at this stage
 covs <- c("E","ES","EST")  #options: c("E","S","ES","EST")
-env_formula_BRT <- c("btemp", "O2", "z")  
+env_formula_BRT <- c("btemp", "O2", "z")
 env_formula_MLP <- "btemp_n + O2_n + z_n"  #the '_n' indicates range normalised variables
+# env_formula_BRT <- c("btemp")  
+# env_formula_MLP <- "btemp_n"  #the '_n' indicates range normalised variables
+
 
 t1 <- Sys.time()
 source("~/PROJECTS/WRAP Location/WRAP_Location_CaseStudy/Fitting_BRTs.R")
@@ -138,7 +145,7 @@ t2 - t1
 
 # --- Save Results and Models ---
 # * take care not to delete some models by overwriting with a model subset (change saved names if doing testing)
-setwd(paste0('~/PROJECTS/WRAP Location/Groundfish EMs/',dir_name,'/'))
+setwd(paste0('~/PROJECTS/WRAP Location/Groundfish EMs 2040train/',dir_name,'/'))
 saveRDS(dat_hist, "dat_hist_results_full.rds")  # * 'full' [full models] or 'temp' [temp-only models]
 saveRDS(dat_fcast, "dat_fcast_results_full.rds")
 
@@ -158,7 +165,7 @@ save(list = ls(pattern = paste0(all_mods, collapse="|")),
 rm(list = ls())  #remove all objects and re-load necessary ones
 
 # --- load functions, data, and model objects ---
-dir_name <- "ipsl"
+dir_name <- "had"
 setwd('~/PROJECTS/WRAP Location/WRAP_Location_CaseStudy/')
 source("Performance_rmse_fun.R")
 source("Performance_cog_fun.R")

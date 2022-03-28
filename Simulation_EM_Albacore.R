@@ -34,9 +34,11 @@ library(dismo)
 library(BBmisc)
 library(neuralnet)
 # devtools::install_github("pbs-assess/sdmTMB")
-library(sdmTMB)
+# library(sdmTMB)
 library(sp)
 library(dplyr)
+library(foreach)
+library(doParallel, quietly = TRUE)
 
 
 #################################
@@ -91,9 +93,10 @@ saveRDS(dat_sub, paste0("~/PROJECTS/WRAP Location/Albacore EMs/",dir_name,"/dat_
 rm(list = ls())  #remove all objects and re-load necessary ones; consider restarting R too
 
 # load data subset for model fitting
-dir_name <- "gfdl"     #of either "had", "ipsl", "gfdl"
+dir_name <- "ipsl"     #of either "had", "ipsl", "gfdl"
 dat <- readRDS(paste0("~/PROJECTS/WRAP Location/Albacore EMs/",dir_name,"/dat_albacore_sub.rds"))
-year_fcast <- 2010
+# year_fcast <- 2010
+year_fcast <- 2040
 dat_hist <- dat[dat$year <= year_fcast,]  #subset for model fitting
 dat_fcast <- dat[dat$year > year_fcast,]  #subset for forecast evaluation
 
@@ -102,6 +105,7 @@ dat_fcast <- dat[dat$year > year_fcast,]  #subset for forecast evaluation
 # dat_hist <- dat_hist[dat_hist$sample==1,]
 # dat <- rbind(dat_hist,dat_fcast)
 
+
 # --- GAMS ---
 # * fitting ECor will take 1-2 hours
 type <- "delta"  #delta or tweedie
@@ -109,10 +113,7 @@ covs <- c("E","S","ES","EST","ECor")  #covariate combinations, options: c("E","S
 env_formula <- "s(temp) + s(chla) + s(mld)"  #full: "s(temp) + s(chla) + s(mld)"
 # env_formula <- "s(temp)"
 
-t1 <- Sys.time()
 source("~/PROJECTS/WRAP Location/WRAP_Location_CaseStudy/Fitting_GAMs.R")
-t2 <- Sys.time()
-t2 - t1
 
 # --- GLMs ---
 # * fitting Sr and ESr will take 2-6 hours, and if data are changed may not fit w/o changing model structure
@@ -150,7 +151,7 @@ t2 - t1
 
 # --- Save Results and Models ---
 # * take care not to delete some models by overwriting with a model subset (change saved names if doing testing)
-setwd(paste0('~/PROJECTS/WRAP Location/Albacore EMs/',dir_name,'/'))
+setwd(paste0('~/PROJECTS/WRAP Location/Albacore EMs 2040train/',dir_name,'/'))
 saveRDS(dat_hist, "dat_hist_results_full.rds")  # * 'full' [full models] or 'temp' [temp-only models]
 saveRDS(dat_fcast, "dat_fcast_results_full.rds")
 
@@ -161,6 +162,16 @@ all_mods <- c("gam_E","gam_S","gam_ES","gam_EST","gam_ECor",
 
 save(list = ls(pattern = paste0(all_mods, collapse="|")),
      file = "saved_models_full.RData")  # * 'full' or 'temp'; this will save all models of these names, even when outdated, if they're in the environment
+
+
+#hist_save <- dat_hist
+#fcast_save <- dat_fcast
+
+dat_fcast <- fcast_save
+dat_fcast <- dat_fcast[,c(1:32,34:38)]
+
+dat_hist <- dat_hist[,c(1:22,27:31,23:26,32:37)]
+
 
 
 ###################################
