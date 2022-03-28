@@ -126,7 +126,7 @@
         ar1_fields = TRUE,  #false for spatiotemporal random fields as IID, true for ar1
         weights = weights,
         spatial_only = FALSE,
-        spatial_trend = FALSE,  #true for spatiotemporal random fields as IID, false for ar1
+        spatial_trend = FALSE, 
         control = sdmTMBcontrol(step.min = 0.01, step.max = 1)
       ))
       
